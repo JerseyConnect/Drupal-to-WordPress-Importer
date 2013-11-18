@@ -1,2 +1,3 @@
 .project
 drupal-to-wp/wp/*
+!drupal-to-wp/wp/README.md

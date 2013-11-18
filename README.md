@@ -6,7 +6,7 @@ Import a Drupal (tested with v6) site into a WordPress install
 Instructions
 ------------
 
-1. Install a fresh copy of WordPress in the `drupal-to-wp/wp` subfolder and point it at your WP database
+1. Install a fresh copy of WordPress in the `drupal-to-wp/wp` subfolder and point it at a copy of your WP database
 1. Add any plugins you need to get custom post types, taxonomies, or roles
 1. Edit `settings.php` to point to your WP install and the Drupal database you want to import
 1. Open a web browser and visit the `drupal-to-wp` folder
