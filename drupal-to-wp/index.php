@@ -26,6 +26,7 @@ class Drupal_to_WP {
 	
 	static $node_to_post_map = array();
 	static $term_to_term_map = array();
+	static $user_to_user_map = array();
 	
 	/**
 	 * Import Drupal nodes into WP posts, mapping types as specified
@@ -86,6 +87,8 @@ class Drupal_to_WP {
 				$node_url = strtolower( str_replace( ' ','-', $node['title'] ) );
 			}
 			
+			$post_author = array_key_exists( $node_content['uid'], self::$user_to_user_map ) ? self::$user_to_user_map[ $node_content['uid'] ] : 0;
+			
 			$post_data = array(
 				'post_content'   => $node_content['body'],
 				'post_date'      => date( 'Y-m-d H:i:s', $node_content['timestamp'] ),
@@ -93,6 +96,7 @@ class Drupal_to_WP {
 				'most_modified'  => date( 'Y-m-d H:i:s', $node_content['mod_timestamp'] ),
 				'post_excerpt'   => $node_content['teaser'],
 				'post_name'      => basename( $node_url ),
+				'post_author'    => $post_author,
 				'post_parent'    => 0,
 				'post_password'  => '',
 				'post_status'    => ( $node['status'] == 1 ? 'publish' : 'draft' ),
@@ -296,6 +300,8 @@ class Drupal_to_WP {
 			if( ! array_key_exists( $comment['nid'], self::$node_to_post_map ) )
 				continue;
 			
+			$comment_author = array_key_exists( $comment['uid'], self::$user_to_user_map ) ? self::$user_to_user_map[ $comment['uid'] ] : 0;
+			
 			wp_insert_comment(
 				array(
 					'comment_post_ID'      => self::$node_to_post_map[ $comment['nid'] ],
@@ -306,7 +312,8 @@ class Drupal_to_WP {
 					'comment_parent'       => intval( $comment['thread'] ),
 					'comment_author_IP'    => $comment['hostname'],
 					'comment_date'         => date( 'Y-m-d H:i:s', $comment['timestamp'] ),
-					'comment_approved'     => (int)$comment['status']
+					'comment_approved'     => (int)$comment['status'],
+					'user_id'              => $comment_author
 				)
 			);
 			
@@ -376,12 +383,18 @@ class Drupal_to_WP {
 				
 				if( in_array( 'existing_user_login', $user_id->get_error_codes() ) ) {
 					echo ' -- user already exists' . "<br>\n";
+					
+					$wpuser = get_user_by( 'login', $user['name'] );
+					self::$user_to_user_map[ $user['uid'] ] = $wpuser->ID;
+					
 				} else {
 					die('Error creating user: ' . print_r( $user_id, true ) );
 				}
 				
 				continue;
 			}
+			
+			self::$user_to_user_map[ $user['uid'] ] = $user_id;
 			
 			add_user_meta( $user_id, '_drupal_metadata', $user['data'] );
 			
@@ -545,11 +558,11 @@ if(! isset( $_POST['content_map'] ) ) {
 
 	}	
 
+	Drupal_to_WP::importUsers( $_POST['role_map'] );
 	Drupal_to_WP::importNodes( $_POST['content_map'] );
 	Drupal_to_WP::importMetadata();
 	Drupal_to_WP::importTaxonomies( $_POST['taxonomy_map'] );
 	Drupal_to_WP::importComments();
-	Drupal_to_WP::importUsers( $_POST['role_map'] );
 
 	echo "<br>" . 'All done!' . "<br>\n";
 
