@@ -1,8 +1,8 @@
 <?php
 
 require 'autoDB.php';
-require 'wp/wp-load.php';
 require 'settings.php';
+require  WP_PATH . '/wp-load.php';
 
 function drupal() {
 	
@@ -128,31 +128,74 @@ class Drupal_to_WP {
 		
 		foreach( $meta_fields as $meta_field ) {
 			
+			// There are two ways of storing metadata -- simply (in the content_type_[node content type] table)
+			//  and richly (in the content_[field name] table)
+			
 			$table_name = 'content_' . $meta_field['field_name'];
 			
-			if( ! isset( drupal()->$table_name ) )
-				continue;
+			if( isset( drupal()->$table_name ) ) {
+				
+				// Found a content_field_name table -- add post meta from its columns
+				
+				$meta_records = drupal()->$table_name->getRecords();
+				
+				foreach( $meta_records as $meta_record ) {
+					
+					// Import all columns beginning with field_name
+					
+					if( ! array_key_exists( $meta_record['nid'], self::$node_to_post_map ) )
+						continue;
+					
+//					echo 'Adding metadata for: ' . self::$node_to_post_map[ $meta_record['nid'] ] . ' - ' . $meta_record[ $value_column ] . "<br>\n";
+					
+					foreach( $meta_record as $column => $value ) {
+						
+						if( 0 !== strpos( $column, $meta_field['field_name'] ) )
+							continue;
+						
+						update_post_meta(
+							self::$node_to_post_map[ $meta_record['nid'] ],
+							'_drupal_' . $column,
+							$value
+						);
+						
+					}
+					
+					
+				}
 			
-			$meta_records = drupal()->$table_name->getRecords();
-			
-			foreach( $meta_records as $meta_record ) {
+			} else {
+
+				// Search the content_type_[content type] table for this value
+				$table_name = 'content_type_' . $meta_field['type_name'];
+				$field_name =  $meta_field['field_name'] . '_value';
+
+//				echo 'Not a table - search content_type table: ' . $table_name . ' for field: ' . $field_name . "<br>\n";
 				
-				$value_column = $meta_field['field_name'] . '_data';
+				if( ! isset( drupal()->$table_name->$field_name ) ) {
+//					echo 'Column: ' . $field_name . ' was not found in table: ' . $table_name . "<br>\n";
+					$field_name = $meta_field['field_name'] . '_data';
+				}
 				
-				if( ! array_key_exists( $meta_record['nid'], self::$node_to_post_map ) )
+				if( ! isset( drupal()->$table_name->$field_name ) )
 					continue;
+
+//				echo 'Saving metadata from: ' . $table_name . ' : ' . $field_name . "<br>\n";
 				
-				if( empty( $meta_record[ $value_column ] ) )
-					continue;
+				$meta_values = drupal()->$table_name->getRecords();
 				
-//				echo 'Adding metadata for: ' . self::$node_to_post_map[ $meta_record['nid'] ] . ' - ' . $meta_record[ $value_column ] . "<br>\n";
-				
-				update_post_meta(
-					self::$node_to_post_map[ $meta_record['nid'] ],
-					'_drupal_' . $meta_field['field_name'],
-					$meta_record[ $value_column ]
-				);
-				
+				foreach( $meta_values as $meta_value ) {
+					
+					if( empty( $meta_value[ $field_name ] ) )
+						continue;
+					
+					update_post_meta(
+						self::$node_to_post_map[ $meta_value['nid'] ],
+						'_drupal_' . $meta_field['field_name'],
+						$meta_value[ $field_name ]
+					);
+					
+				}
 			}
 			
 		}
@@ -402,6 +445,21 @@ class Drupal_to_WP {
 		
 	}
 	
+	/**
+	 * Import uploads from sites/*? folders into UPLOADS
+	 */
+	static function importUploads() {
+		
+		$wp_upload_dir = wp_upload_dir();
+		
+		$dr_upload_dirs = drupal()->variable->value->getValues(
+			array(
+				'name' => 'file_%'
+			)
+		);
+		
+	}
+	
 }
 
 /**
@@ -457,7 +515,11 @@ if(! isset( $_POST['content_map'] ) ) {
 	
 	<p>
 		<input type="checkbox" id="erase" name="erase" checked="true">
-		<label for="erase">Erase WP content before importing from Drupal 6?</label>
+		<label for="erase">Erase WP content before importing from Drupal?</label>
+	</p>
+	<p>
+		<input type="checkbox" id="copy_uploads" name="copy_uploads">
+		<label for="copy_uploads">Copy uploaded files into your <code>WP_CONTENT_DIR</code>?</label>
 	</p>
 	
 	<?php
@@ -563,6 +625,12 @@ if(! isset( $_POST['content_map'] ) ) {
 	Drupal_to_WP::importMetadata();
 	Drupal_to_WP::importTaxonomies( $_POST['taxonomy_map'] );
 	Drupal_to_WP::importComments();
+	
+	
+	if( isset( $_REQUEST['copy_uploads'] ) ) :
+		echo 'Copying uploaded files to ' . WP_CONTENT_DIR . '...' . "<br>\n";
+		Drupal_to_WP::importUploads();
+	endif;
 
 	echo "<br>" . 'All done!' . "<br>\n";
 
