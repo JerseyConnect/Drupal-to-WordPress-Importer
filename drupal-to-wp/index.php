@@ -178,12 +178,13 @@ if(! isset( $_POST['content_map'] ) ) {
 	Drupal_to_WP::importTaxonomies( $_POST['taxonomy_map'] );
 	Drupal_to_WP::importComments();
 	
-	
+	// Uploaded files are imported as WP attachments during metadata import
+	//  This dertermines whether they are copied into the WP uploads folder
 	if( isset( $_REQUEST['copy_uploads'] ) ) :
-		echo 'Copying uploaded files to ' . WP_CONTENT_DIR . '...' . "<br>\n";
+		echo 'Copying uploaded files to ' . UPLOADS . '...' . "<br>\n";
 		Drupal_to_WP::importUploads();
 	endif;
-
+	
 	Drupal_to_WP::postProcessNodes( $_POST['content_map'] );
 
 	echo "<br>" . 'All done!' . "<br>\n";

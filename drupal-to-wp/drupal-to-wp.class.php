@@ -23,6 +23,7 @@ class Drupal_to_WP {
 	static $node_to_post_map = array();
 	static $term_to_term_map = array();
 	static $user_to_user_map = array();
+	static $file_to_file_map = array();
 	
 	/**
 	 * Import Drupal nodes into WP posts, mapping types as specified
@@ -133,6 +134,9 @@ class Drupal_to_WP {
 		
 		echo 'Importing metadata...'. "<br>\n";
 		
+		$upload_dir = wp_upload_dir();
+		$searched_fields = array();
+		
 		# Add content field meta values as postmeta
 		$meta_fields = drupal()->content_node_field_instance->getRecords();
 		
@@ -142,6 +146,9 @@ class Drupal_to_WP {
 			//  and richly (in the content_[field name] table)
 			
 			$table_name = 'content_' . $meta_field['field_name'];
+			
+			if( in_array( $meta_field['field_name'], $searched_fields ) )
+				continue;
 			
 			if( isset( drupal()->$table_name ) ) {
 				
@@ -161,14 +168,48 @@ class Drupal_to_WP {
 					
 					foreach( $meta_record as $column => $value ) {
 						
+						if( empty( $value ) )
+							continue;
+						
 						if( 0 !== strpos( $column, $meta_field['field_name'] ) )
 							continue;
 						
-						update_post_meta(
+						if( strpos( $column, '_fid' ) ) {
+							
+							if( array_key_exists( (int)$value, self::$file_to_file_map ) )
+								continue;
+							
+							// This is a "file ID" column - create attachment entry
+							
+							$file = drupal()->files->getRecord( (int)$value );
+							
+							$attachment = array(
+								'guid'           => $upload_dir['url'] . $file['filepath'],
+								'post_mime_type' => $file['filemime'],
+								'post_title'     => preg_replace( '/\.[^.]+$/', '', $file['filename'] ),
+								'post_status'    => 'inherit'
+							);
+							
+							$result = wp_insert_attachment(
+								$attachment,
+								$file['filename'],
+								self::$node_to_post_map[ $meta_record['nid'] ]
+							);
+							
+//							echo 'Found a file attachment meta value: ' . $value . ' for key:' . $column . ' and node: ' . $meta_record['nid'] . "<br>\n";
+							
+							self::$file_to_file_map[ (int)$value ] = $result;
+							
+							$value = $result;
+						}
+						
+						add_post_meta(
 							self::$node_to_post_map[ $meta_record['nid'] ],
 							'_drupal_' . $column,
 							$value
 						);
+						
+						$searched_fields[] = $column;
 						
 					}
 					
@@ -209,6 +250,8 @@ class Drupal_to_WP {
 				}
 			}
 			
+			$searched_fields[] = $meta_field['field_name'];
+				
 		}
 	}
 	
@@ -469,6 +512,16 @@ class Drupal_to_WP {
 				'name' => 'file_%'
 			)
 		);
+
+		// Locate files based on upload vars		
+
+		$files = drupal()->files->getAllRecords();
+		foreach( $files as $file ) {
+			
+			// Only transfer files referenced by a node
+			
+			
+		}
 		
 		
 		
