@@ -13,6 +13,11 @@ define( 'DR_USER', 'username' );
 define( 'DR_PASS', 'password' );
 
 /**
+ * Path to your WordPress install
+ */
+define( 'WP_PATH', 'wp' );
+
+/**
  * Constants for accessing the WordPress database -- only needed if erasing a WP site
  */
 define( 'WP_HOST', 'localhost' );
