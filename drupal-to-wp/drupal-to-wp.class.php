@@ -27,8 +27,11 @@ class Drupal_to_WP {
 	
 	/**
 	 * Import Drupal nodes into WP posts, mapping types as specified
+	 * Optionally tag/categorize imported content acording to user instructions
 	 */
-	static function importNodes( $type_map ) {
+	static function importNodes( $type_map, $node_extras ) {
+		
+		extract( $node_extras );
 		
 		echo 'Importing posts...' . "<br>\n";
 		
@@ -86,6 +89,48 @@ class Drupal_to_WP {
 			
 			$post_author = array_key_exists( $node_content['uid'], self::$user_to_user_map ) ? self::$user_to_user_map[ $node_content['uid'] ] : 0;
 			
+			// If user requested a new parent page, create or locate it
+			if( ! empty( $parents ) && array_key_exists( $node['type'], $parents ) && ! empty( $parents[ $node['type'] ] ) ) {
+				
+				$parent_page = $parents[ $node['type'] ];
+				
+				if( is_numeric( $parent_page ) ) {
+					
+					if( ! get_post( (int)$parent_page ) ) {
+						$parent_page = 0;
+					}
+					
+				} else {
+					
+					$page = get_page_by_path(
+						untrailingslashit( strtolower( str_replace( ' ','-', $parent_page ) ) ), 
+						OBJECT, 
+						$_POST['content_map'][ $node['type'] ]
+					);
+					
+					if( $page ) {
+						
+						$parent_page = (int)$page->ID;
+						
+					} else {
+						
+						$post_data = array(
+							'post_type'    => $_POST['content_map'][ $node['type'] ],
+							'post_title'   => $parent_page,
+							'post_name'    => strtolower( str_replace( ' ','-', $parent_page ) ),
+							'post_content' => 'Created by Drupal to WP importer' 
+						);
+						
+						$parent_page = wp_insert_post( $post_data );
+						
+					}
+					
+				}
+				
+			} else {
+				$parent_page = 0;
+			}
+			
 			$post_data = array(
 				'post_content'   => $node_content['body'],
 				'post_date'      => date( 'Y-m-d H:i:s', $node_content['timestamp'] ),
@@ -94,7 +139,7 @@ class Drupal_to_WP {
 				'post_excerpt'   => $node_content['teaser'],
 				'post_name'      => basename( $node_url ),
 				'post_author'    => $post_author,
-				'post_parent'    => 0,
+				'post_parent'    => (int)$parent_page,
 				'post_password'  => '',
 				'post_status'    => ( $node['status'] == 1 ? 'publish' : 'draft' ),
 				'post_title'     => $node['title'],
@@ -120,6 +165,32 @@ class Drupal_to_WP {
 				)
 			);
 			update_post_meta( $new_post_id, '_drupal_aliases', $aliases );
+			
+			// Add tags / categories if requested
+			
+			if( array_key_exists( $node['type'], $add_tag_map ) ) {
+				wp_set_post_tags(
+					$new_post_id,
+					$add_tag_map[ $node['type'] ],
+					true
+				);
+			}
+			
+			if( ! function_exists( 'wp_create_category' ) )
+				require WP_PATH . '/wp-admin/includes/taxonomy.php';
+			
+			if( array_key_exists( $node['type'], $add_cat_map ) ) {
+				
+				$term = term_exists( $add_cat_map[ $node['type'] ], 'category' );
+				if( ! $term ) {
+					$term = wp_create_category( $add_cat_map[ $node['type'] ] );
+				}
+				
+				wp_set_post_categories(
+					$new_post_id,
+					$term
+				);
+			}
 			
 			// TODO: Import revisions (?)
 			
@@ -183,8 +254,13 @@ class Drupal_to_WP {
 							
 							$file = drupal()->files->getRecord( (int)$value );
 							
+							// Long files names will exceed guid length limit
+							$guid = $upload_dir['url'] . $file['filepath'];
+							if( 255 >= strlen( $guid ) )
+								$guid = substr( $guid, 0, 254 ); 
+							
 							$attachment = array(
-								'guid'           => $upload_dir['url'] . $file['filepath'],
+								'guid'           => $guid,
 								'post_mime_type' => $file['filemime'],
 								'post_title'     => preg_replace( '/\.[^.]+$/', '', $file['filename'] ),
 								'post_status'    => 'inherit'

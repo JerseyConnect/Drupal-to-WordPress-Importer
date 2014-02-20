@@ -70,7 +70,7 @@ if(! isset( $_POST['content_map'] ) ) {
 		<label for="erase">Erase WP content before importing from Drupal?</label>
 	</p>
 	<p>
-		<input type="checkbox" id="copy_uploads" name="copy_uploads">
+		<input type="checkbox" id="copy_uploads" name="copy_uploads" disabled="disabled">
 		<label for="copy_uploads">Copy uploaded files into your uploads folder? <code><?= UPLOADS ?></code></label>
 	</p>
 	
@@ -94,7 +94,14 @@ if(! isset( $_POST['content_map'] ) ) {
 	<h2>Content type mapping:</h2>
 	<ul>
 		<?php foreach( $content_types as $type ) : ?>
-		<li><span class="original-wide"><?= $type ?></span> => <select name="content_map[<?= $type ?>]"><?= $wp_types ?></select></li>
+		<li>
+			<span class="original-wide"><?= $type ?></span>
+			 => 
+			<select name="content_map[<?= $type ?>]"><?= $wp_types ?></select>
+			<input type="text" name="add_cat[<?= $type ?>]" placeholder="Create or add this category to all content of this type">
+			<input type="text" name="add_tag[<?= $type ?>]" placeholder="Create of add this tag to all content of this type">
+			<input type="text" name="parent[<?= $type ?>]"  placeholder="Set this page as the parent of all nodes of this type">
+		</li>
 		<?php endforeach; ?>
 	</ul>
 	
@@ -172,8 +179,15 @@ if(! isset( $_POST['content_map'] ) ) {
 
 	}	
 
+	$node_extras = array(
+		'add_cat_map' => $_POST['add_cat'],
+		'add_tag_map' => $_POST['add_tag'],
+		'parents'  => $_POST['parent']
+	);
+
 	Drupal_to_WP::importUsers( $_POST['role_map'] );
-	Drupal_to_WP::importNodes( $_POST['content_map'] );
+	Drupal_to_WP::importNodes( $_POST['content_map'], $node_extras );
+
 	Drupal_to_WP::importMetadata();
 	Drupal_to_WP::importTaxonomies( $_POST['taxonomy_map'] );
 	Drupal_to_WP::importComments();
