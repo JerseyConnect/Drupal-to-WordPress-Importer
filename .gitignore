@@ -1,3 +1,4 @@
 .project
+drupal-to-wp/settings.php
 drupal-to-wp/wp/*
 !drupal-to-wp/wp/README.md
