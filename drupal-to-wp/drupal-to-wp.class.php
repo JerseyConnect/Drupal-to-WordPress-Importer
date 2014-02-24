@@ -147,7 +147,7 @@ class Drupal_to_WP {
 			);
 			
 			$post_data = apply_filters(
-				sprintf( 'import_content_pre_%s', $_POST['content_map'][ $node['type'] ] ),
+				sprintf( 'import_node_pre_%s', $_POST['content_map'][ $node['type'] ] ),
 				$post_data,
 				$node 
 			);
@@ -296,33 +296,33 @@ class Drupal_to_WP {
 
 				// Search the content_type_[content type] table for this value
 				$table_name = 'content_type_' . $meta_field['type_name'];
-				$field_name =  $meta_field['field_name'] . '_value';
-
-//				echo 'Not a table - search content_type table: ' . $table_name . ' for field: ' . $field_name . "<br>\n";
+//				echo 'Not a table - search content_type table: ' . $table_name . "<br>\n";
 				
-				if( ! isset( drupal()->$table_name->$field_name ) ) {
-//					echo 'Column: ' . $field_name . ' was not found in table: ' . $table_name . "<br>\n";
-					$field_name = $meta_field['field_name'] . '_data';
-				}
+				$meta_records = drupal()->$table_name->getRecords();
 				
-				if( ! isset( drupal()->$table_name->$field_name ) )
-					continue;
-
-//				echo 'Saving metadata from: ' . $table_name . ' : ' . $field_name . "<br>\n";
-				
-				$meta_values = drupal()->$table_name->getRecords();
-				
-				foreach( $meta_values as $meta_value ) {
+				foreach( $meta_records as $meta_record ) {
 					
-					if( empty( $meta_value[ $field_name ] ) )
+					// Import all columns beginning with field_name
+					
+					if( ! array_key_exists( $meta_record['nid'], self::$node_to_post_map ) )
 						continue;
 					
-					update_post_meta(
-						self::$node_to_post_map[ $meta_value['nid'] ],
-						'_drupal_' . $meta_field['field_name'],
-						$meta_value[ $field_name ]
-					);
+//					echo 'Adding metadata for: ' . self::$node_to_post_map[ $meta_record['nid'] ] . ' - ' . $meta_record[ $value_column ] . "<br>\n";
 					
+					foreach( $meta_record as $column => $value ) {
+						
+						if( empty( $value ) )
+							continue;
+						
+						if( 0 !== strpos( $column, $meta_field['field_name'] ) )
+							continue;
+						
+						update_post_meta(
+							self::$node_to_post_map[ $meta_record['nid'] ],
+							'_drupal_' . $column,
+							$value
+						);
+					}
 				}
 			}
 			
@@ -629,7 +629,7 @@ class Drupal_to_WP {
 		foreach( $nodes as $node ) {
 			
 			do_action(
-				sprintf( 'import_content_post_%s', $_POST['content_map'][ $node['type'] ] ),
+				sprintf( 'import_post_%s', $_POST['content_map'][ $node['type'] ] ),
 				self::$node_to_post_map[ $node['nid'] ],
 				$node 
 			);
