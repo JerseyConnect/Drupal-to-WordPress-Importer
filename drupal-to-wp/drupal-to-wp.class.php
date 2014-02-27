@@ -266,7 +266,9 @@ class Drupal_to_WP {
 								'guid'           => $guid,
 								'post_mime_type' => $file['filemime'],
 								'post_title'     => preg_replace( '/\.[^.]+$/', '', $file['filename'] ),
-								'post_status'    => 'inherit'
+								'post_status'    => 'inherit',
+								'post_date'      => date('Y-m-d H:i:s', $file['timestamp'] ),
+								'post_date_gmt'  => date('Y-m-d H:i:s', $file['timestamp'] )
 							);
 							
 							$result = wp_insert_attachment(
@@ -278,6 +280,12 @@ class Drupal_to_WP {
 //							echo 'Found a file attachment meta value: ' . $value . ' for key:' . $column . ' and node: ' . $meta_record['nid'] . "<br>\n";
 							
 							self::$file_to_file_map[ (int)$value ] = $result;
+							
+							add_post_meta(
+								$result,
+								'_drupal_fid',
+								$file['fid']
+							);
 							
 							$value = $result;
 						}
@@ -319,6 +327,48 @@ class Drupal_to_WP {
 						
 						if( 0 !== strpos( $column, $meta_field['field_name'] ) )
 							continue;
+						
+						if( strpos( $column, '_fid' ) ) {
+							
+							if( array_key_exists( (int)$value, self::$file_to_file_map ) )
+								continue;
+							
+							// This is a "file ID" column - create attachment entry
+							
+							$file = drupal()->files->getRecord( (int)$value );
+							
+							// Long files names will exceed guid length limit
+							$guid = $upload_dir['url'] . $file['filepath'];
+							if( 255 >= strlen( $guid ) )
+								$guid = substr( $guid, 0, 254 ); 
+							
+							$attachment = array(
+								'guid'           => $guid,
+								'post_mime_type' => $file['filemime'],
+								'post_title'     => preg_replace( '/\.[^.]+$/', '', $file['filename'] ),
+								'post_status'    => 'inherit',
+								'post_date'      => date('Y-m-d H:i:s', $file['timestamp'] ),
+								'post_date_gmt'  => date('Y-m-d H:i:s', $file['timestamp'] )
+							);
+							
+							$result = wp_insert_attachment(
+								$attachment,
+								$file['filename'],
+								self::$node_to_post_map[ $meta_record['nid'] ]
+							);
+							
+//							echo 'Found a file attachment meta value: ' . $value . ' for key:' . $column . ' and node: ' . $meta_record['nid'] . "<br>\n";
+							
+							self::$file_to_file_map[ (int)$value ] = $result;
+							
+							add_post_meta(
+								$result,
+								'_drupal_fid',
+								$file['fid']
+							);
+							
+							$value = $result;
+						}
 						
 						update_post_meta(
 							self::$node_to_post_map[ $meta_record['nid'] ],
