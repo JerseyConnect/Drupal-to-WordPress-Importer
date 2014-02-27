@@ -54,7 +54,10 @@ class Drupal_to_WP {
 		);
 		
 		foreach( $nodes as $node ) {
-
+			
+			if( apply_filters( 'import_node_skip_node', false, $node ) )
+				continue;
+			
 			# Get content from latest revision
 			$node_content = drupal()->node_revisions->getRecord(
 				array(
@@ -627,6 +630,9 @@ class Drupal_to_WP {
 		);
 		
 		foreach( $nodes as $node ) {
+			
+			if( apply_filters( 'import_node_skip_node', false, $node ) )
+				continue;
 			
 			do_action(
 				sprintf( 'import_post_%s', $_POST['content_map'][ $node['type'] ] ),
