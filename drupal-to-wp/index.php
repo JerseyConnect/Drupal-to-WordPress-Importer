@@ -12,6 +12,9 @@ if ( ! defined( 'UPLOADS' ) )
  * Load plugins
  */
 
+foreach( glob( 'plugins/*.php' ) as $plugin ) {
+	include $plugin;
+}
 
 
 /**
