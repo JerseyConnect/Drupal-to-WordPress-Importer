@@ -159,6 +159,7 @@ class Drupal_to_WP {
 				$post_data
 			);
 			update_post_meta( $new_post_id, '_drupal_nid', $node['nid'] );
+			update_post_meta( $new_post_id, '_drupal_database', drupal()->dbName );
 			self::$node_to_post_map[ $node['nid'] ] = $new_post_id;
 			
 			// Store all other URL aliases
