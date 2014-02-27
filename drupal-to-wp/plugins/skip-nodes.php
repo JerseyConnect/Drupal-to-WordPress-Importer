@@ -49,6 +49,8 @@ class SkipNodeImport {
 		if( ! empty( self::$skips ) )
 			return;
 		
+		echo 'Loading node skip list for: ' . drupal()->dbName . "<br>\n";
+		
 		$file_name = drupal()->dbName . '_skip.txt';
 		self::$skips = file( dirname( __FILE__ ) . DIRECTORY_SEPARATOR . $file_name );
 		
