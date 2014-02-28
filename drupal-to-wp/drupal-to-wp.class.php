@@ -65,7 +65,7 @@ class Drupal_to_WP {
 					'DESC' => 'timestamp'
 				)
 			);
-
+			
 			# Get timestamp from earliest revision and overwrite latest record
 			$node_creation = drupal()->node_revisions->getRecord(
 				array(
@@ -135,7 +135,7 @@ class Drupal_to_WP {
 			}
 			
 			$post_data = array(
-				'post_content'   => $node_content['body'],
+				'post_content'   => preg_replace( '/[^(\x20-\x7F)]*/', '', $node_content['body'] ),
 				'post_date'      => date( 'Y-m-d H:i:s', $node_content['timestamp'] ),
 //				'post_date_gmt'  => date( 'Y-m-d H:i:s', $node_content['timestamp'] ),
 				'most_modified'  => date( 'Y-m-d H:i:s', $node_content['mod_timestamp'] ),
@@ -158,6 +158,7 @@ class Drupal_to_WP {
 			$new_post_id = wp_insert_post(
 				$post_data
 			);
+			
 			update_post_meta( $new_post_id, '_drupal_nid', $node['nid'] );
 			update_post_meta( $new_post_id, '_drupal_database', drupal()->dbName );
 			self::$node_to_post_map[ $node['nid'] ] = $new_post_id;
