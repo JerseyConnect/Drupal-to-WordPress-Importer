@@ -121,7 +121,8 @@ class Drupal_to_WP {
 							'post_type'    => $_POST['content_map'][ $node['type'] ],
 							'post_title'   => $parent_page,
 							'post_name'    => strtolower( str_replace( ' ','-', $parent_page ) ),
-							'post_content' => 'Created by Drupal to WP importer' 
+							'post_content' => 'Created by Drupal to WP importer',
+							'post_status'  => 'publish'
 						);
 						
 						$parent_page = wp_insert_post( $post_data );
