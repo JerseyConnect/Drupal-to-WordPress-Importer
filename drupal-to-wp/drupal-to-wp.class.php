@@ -33,7 +33,7 @@ class Drupal_to_WP {
 		
 		extract( $node_extras );
 		
-		echo 'Importing posts...' . "<br>\n";
+		echo_now( 'Importing posts...');
 		
 		# Build array of types that aren't being skipped
 		$import_types = array();
@@ -209,7 +209,7 @@ class Drupal_to_WP {
 	 */
 	static function importMetadata() {
 		
-		echo 'Importing metadata...'. "<br>\n";
+		echo_now( 'Importing metadata...' );
 		
 		$upload_dir = wp_upload_dir();
 		$searched_fields = array();
@@ -393,7 +393,7 @@ class Drupal_to_WP {
 	 */
 	static function importTaxonomies( $taxonomy_map ) {
 		
-		echo 'Importing categories and tags...' . "<br>\n";
+		echo_now( 'Importing categories and tags...' );
 		
 		# Import Drupal vocabularies as WP taxonomies
 		
@@ -460,12 +460,15 @@ class Drupal_to_WP {
 			);
 			
 			if( is_wp_error( $term_result ) ) {
+				
 				echo 'WARNING - Got error creating term: ' . $term['name']; 
 				
 				if( in_array( 'term_exists', $term_result->get_error_codes() ) ) {
 					
 					echo ' -- term already exists as: ' . $term_result->get_error_data() . "<br>\n";
-					$term_id = $term_result->get_error_data();
+					$term_id = (int)$term_result->get_error_data();
+
+					self::$term_to_term_map[ (int)$term['tid'] ] = $term_id;
 					
 				} else {
 					
@@ -473,6 +476,7 @@ class Drupal_to_WP {
 					
 				}
 				continue;
+				
 			}
 			
 			$term_id = $term_result['term_id'];
@@ -520,7 +524,7 @@ class Drupal_to_WP {
 	 */
 	static function importComments() {
 		
-		echo 'Importing comments...' . "<br>\n";
+		echo_now( 'Importing comments...' );
 		
 		$comments = drupal()->comments->getRecords();
 		
@@ -555,7 +559,7 @@ class Drupal_to_WP {
 	 */
 	static function importUsers( $role_map ) {
 
-		echo 'Importing users...' . "<br>\n";
+		echo_now( 'Importing users...' );
 
 		# Generate a pseudo-random password - CHANGE YOUR PASSWORDS AFTER IMPORT
 		$password = 'password';
@@ -704,5 +708,12 @@ class Drupal_to_WP {
 	}
 	
 }
+
+function echo_now( $message ) {
+	echo str_pad($message . '<br>', 16384) . "\n";
+	@ob_flush();
+	flush();
+}
+
 
 ?>
