@@ -97,8 +97,9 @@ if(! isset( $_POST['content_map'] ) ) {
 	<h2>Content type mapping:</h2>
 	<ul>
 		<?php foreach( $content_types as $type ) : ?>
+		<?php $count = drupal()->node->nid->getUniqueValues( array( 'type' => $type ) ) ?>
 		<li>
-			<span class="original-wide"><?= $type ?></span>
+			<span class="original-wide"><?= $type ?> ( <?= count( $count ) ?> )</span>
 			 => 
 			<select name="content_map[<?= $type ?>]"><?= $wp_types ?></select>
 			<input type="text" name="add_cat[<?= $type ?>]" placeholder="Create or add this category to all content of this type">
