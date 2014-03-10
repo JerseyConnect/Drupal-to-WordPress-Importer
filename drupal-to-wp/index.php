@@ -164,26 +164,13 @@ if(! isset( $_POST['content_map'] ) ) {
 	
 } else {
 	
-	echo 'Starting import...' . "<br>\n";
+	echo_now( 'Starting import...' );
 	
 	# Clear out WordPress DB if indicated
 	
 	if( isset( $_POST['erase'] ) ) {
 		
-		echo_now( 'Clearing WordPress data...' );
-		
-		wordpress()->query( 'TRUNCATE TABLE wp_comments' );
-		wordpress()->query( 'TRUNCATE TABLE wp_links' );
-		wordpress()->query( 'TRUNCATE TABLE wp_postmeta' );
-		wordpress()->query( 'TRUNCATE TABLE wp_posts' );
-		wordpress()->query( 'TRUNCATE TABLE wp_term_relationships' );
-		wordpress()->query( 'TRUNCATE TABLE wp_term_taxonomy' );
-		wordpress()->query( 'TRUNCATE TABLE wp_terms' );
-		
-		wordpress()->query( 'DELETE FROM wp_users WHERE ID > 1' );
-		wordpress()->query( 'DELETE FROM wp_usermeta WHERE user_id > 1' );
-		
-		do_action( 'erase_wp_data' );
+		Drupal_to_WP::eraseWPData();
 		
 	}	
 

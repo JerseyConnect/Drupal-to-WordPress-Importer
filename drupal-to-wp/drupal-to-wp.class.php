@@ -26,6 +26,30 @@ class Drupal_to_WP {
 	static $file_to_file_map = array();
 	
 	/**
+	 * Clear out an existing WP install before importing if specified by user
+	 */
+	static function eraseWPData() {
+		
+		global $wpdb;
+		
+		echo_now( 'Clearing WordPress data...' );
+		
+		wordpress()->query( 'TRUNCATE TABLE ' . $wpdb->prefix . 'comments' );
+		wordpress()->query( 'TRUNCATE TABLE ' . $wpdb->prefix . 'links' );
+		wordpress()->query( 'TRUNCATE TABLE ' . $wpdb->prefix . 'postmeta' );
+		wordpress()->query( 'TRUNCATE TABLE ' . $wpdb->prefix . 'posts' );
+		wordpress()->query( 'TRUNCATE TABLE ' . $wpdb->prefix . 'term_relationships' );
+		wordpress()->query( 'TRUNCATE TABLE ' . $wpdb->prefix . 'term_taxonomy' );
+		wordpress()->query( 'TRUNCATE TABLE ' . $wpdb->prefix . 'terms' );
+		
+		wordpress()->query( 'DELETE FROM ' . $wpdb->prefix . 'users WHERE ID > 1' );
+		wordpress()->query( 'DELETE FROM ' . $wpdb->prefix . 'usermeta WHERE user_id > 1' );
+		
+		do_action( 'erase_wp_data' );
+		
+	}
+	
+	/**
 	 * Import Drupal nodes into WP posts, mapping types as specified
 	 * Optionally tag/categorize imported content acording to user instructions
 	 */
