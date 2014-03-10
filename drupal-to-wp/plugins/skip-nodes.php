@@ -19,12 +19,18 @@ class SkipNodeImport {
 	
 	public static function is_node_skipped( $result, $node ) {
 		
+		if( $result )
+			return $result;
+		
 		if( ! self::has_skip_file() )
-			return false;
+			return $result;
 		
 		self::load_skips();
 		
-		return in_array( (int)$node['nid'], self::$skips );
+		if( in_array(  (int)$node['nid'], self::$skips  ) )
+			return true;
+		
+		return $result;
 		
 	}
 	
