@@ -2,16 +2,19 @@
 /**
  * Allow the importer to skip nodes by ID using a simple file format
  * 
- * This plugin will search for a [Drupal database name]_skip.txt file in the plugins folder.
+ * This plugin will search for a [Drupal database name]_skip.txt file in the plugins folder (or another specified folder).
  * If found, any node IDs listed in the file will be skipped.
  * 
  */
+
+define( 'NODESKIP_SKIPLIST_PATH', './skiplists' );
 
 add_filter( 'import_node_skip_node', array( 'SkipNodeImport', 'is_node_skipped' ), 10, 2 );
 
 class SkipNodeImport {
 	
 	public static $has_skip_file = 'unknown';
+	private static $skiplist_path = false;
 	private static $skips = array();
 	
 	public static function is_node_skipped( $result, $node ) {
@@ -25,6 +28,21 @@ class SkipNodeImport {
 		
 	}
 	
+	public static function get_skiplist_path() {
+		
+		if( ! empty( self::$skiplist_path ) )
+			return self::$skiplist_path;
+		
+		$dir = realpath( dirname( __FILE__ ) . DIRECTORY_SEPARATOR . NODESKIP_SKIPLIST_PATH );
+		if( $dir ) {
+			self::$skiplist_path = $dir;
+			return $dir;
+		}
+		
+		return '.';
+		
+	}
+	
 	public static function has_skip_file() {
 		
 		if( false === self::$has_skip_file )
@@ -34,7 +52,7 @@ class SkipNodeImport {
 		
 		$file_name = drupal()->dbName . '_skip.txt';
 		
-		if( file_exists( dirname( __FILE__ ) . DIRECTORY_SEPARATOR . $file_name ) ) {
+		if( file_exists( self::get_skiplist_path() . DIRECTORY_SEPARATOR . $file_name ) ) {
 			self::$has_skip_file = true;
 			return true;
 		} else {
@@ -52,7 +70,7 @@ class SkipNodeImport {
 		echo 'Loading node skip list for: ' . drupal()->dbName . "<br>\n";
 		
 		$file_name = drupal()->dbName . '_skip.txt';
-		self::$skips = file( dirname( __FILE__ ) . DIRECTORY_SEPARATOR . $file_name );
+		self::$skips = file( self::get_skiplist_path() . DIRECTORY_SEPARATOR . $file_name );
 		
 	}
 	
