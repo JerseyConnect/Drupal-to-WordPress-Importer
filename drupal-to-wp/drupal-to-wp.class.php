@@ -668,6 +668,8 @@ class Drupal_to_WP {
 	 */
 	static function postProcessNodes( $type_map ) {
 		
+		echo_now( 'Running post processing on nodes...' );
+
 		# Build array of types that aren't being skipped
 		$import_types = array();
 		$import_types =  array_map(

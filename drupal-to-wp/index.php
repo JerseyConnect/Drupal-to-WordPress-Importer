@@ -169,7 +169,9 @@ if(! isset( $_POST['content_map'] ) ) {
 	# Clear out WordPress DB if indicated
 	
 	if( isset( $_POST['erase'] ) ) {
-	
+		
+		echo_now( 'Clearing WordPress data...' );
+		
 		wordpress()->query( 'TRUNCATE TABLE wp_comments' );
 		wordpress()->query( 'TRUNCATE TABLE wp_links' );
 		wordpress()->query( 'TRUNCATE TABLE wp_postmeta' );
@@ -180,7 +182,9 @@ if(! isset( $_POST['content_map'] ) ) {
 		
 		wordpress()->query( 'DELETE FROM wp_users WHERE ID > 1' );
 		wordpress()->query( 'DELETE FROM wp_usermeta WHERE user_id > 1' );
-
+		
+		do_action( 'erase_wp_data' );
+		
 	}	
 
 	$node_extras = array(
