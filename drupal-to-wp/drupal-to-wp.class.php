@@ -108,7 +108,7 @@ class Drupal_to_WP {
 					$page = get_page_by_path(
 						untrailingslashit( strtolower( str_replace( ' ','-', $parent_page ) ) ), 
 						OBJECT, 
-						$_POST['content_map'][ $node['type'] ]
+						$type_map[ $node['type'] ]
 					);
 					
 					if( $page ) {
@@ -118,7 +118,7 @@ class Drupal_to_WP {
 					} else {
 						
 						$post_data = array(
-							'post_type'    => $_POST['content_map'][ $node['type'] ],
+							'post_type'    => $type_map[ $node['type'] ],
 							'post_title'   => $parent_page,
 							'post_name'    => strtolower( str_replace( ' ','-', $parent_page ) ),
 							'post_content' => 'Created by Drupal to WP importer',
@@ -147,11 +147,11 @@ class Drupal_to_WP {
 				'post_password'  => '',
 				'post_status'    => ( $node['status'] == 1 ? 'publish' : 'draft' ),
 				'post_title'     => $node['title'],
-				'post_type'      => $_POST['content_map'][ $node['type'] ]
+				'post_type'      => $type_map[ $node['type'] ]
 			);
 			
 			$post_data = apply_filters(
-				sprintf( 'import_node_pre_%s', $_POST['content_map'][ $node['type'] ] ),
+				sprintf( 'import_node_pre_%s', $type_map[ $node['type'] ] ),
 				$post_data,
 				$node 
 			);
@@ -688,7 +688,13 @@ class Drupal_to_WP {
 				continue;
 			
 			do_action(
-				sprintf( 'import_post_%s', $_POST['content_map'][ $node['type'] ] ),
+				'import_node_postprocess',
+				self::$node_to_post_map[ $node['nid'] ],
+				$node 
+			);
+			
+			do_action(
+				sprintf( 'import_post_%s', $type_map[ $node['type'] ] ),
 				self::$node_to_post_map[ $node['nid'] ],
 				$node 
 			);
