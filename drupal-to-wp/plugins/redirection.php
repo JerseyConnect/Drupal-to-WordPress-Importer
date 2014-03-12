@@ -9,7 +9,7 @@ define( 'REDIRECTIONIMPORT_GROUP_NAME', 'Drupal Conversion' );
 
 // Only proceed if Redirection is installed and active
 if( function_exists( 'red_get_url' ) ) {
-	add_action( 'erase_wp_data', array( 'RedirectionImport', 'clean_alias_redirects' ) );
+	add_action( 'erase_wp_data_after', array( 'RedirectionImport', 'clean_alias_redirects' ) );
 	add_action( 'import_node_postprocess', array( 'RedirectionImport', 'build_alias_redirects' ), 10, 2 );
 }
 
