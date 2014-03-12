@@ -34,6 +34,8 @@ class Drupal_to_WP {
 		
 		echo_now( 'Clearing WordPress data...' );
 		
+		do_action( 'erase_wp_data_before' );
+		
 		wordpress()->query( 'TRUNCATE TABLE ' . $wpdb->prefix . 'comments' );
 		wordpress()->query( 'TRUNCATE TABLE ' . $wpdb->prefix . 'links' );
 		wordpress()->query( 'TRUNCATE TABLE ' . $wpdb->prefix . 'postmeta' );
@@ -45,7 +47,7 @@ class Drupal_to_WP {
 		wordpress()->query( 'DELETE FROM ' . $wpdb->prefix . 'users WHERE ID > 1' );
 		wordpress()->query( 'DELETE FROM ' . $wpdb->prefix . 'usermeta WHERE user_id > 1' );
 		
-		do_action( 'erase_wp_data' );
+		do_action( 'erase_wp_data_after' );
 		
 	}
 	
