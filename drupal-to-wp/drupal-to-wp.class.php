@@ -175,9 +175,15 @@ class Drupal_to_WP {
 				'post_title'     => $node['title'],
 				'post_type'      => $type_map[ $node['type'] ]
 			);
+
+			$post_data = apply_filters(
+				sprintf( 'import_node_pre_%s', $node['type'] ),
+				$post_data,
+				$node 
+			);
 			
 			$post_data = apply_filters(
-				sprintf( 'import_node_pre_%s', $type_map[ $node['type'] ] ),
+				sprintf( 'import_post_pre_%s', $type_map[ $node['type'] ] ),
 				$post_data,
 				$node 
 			);
@@ -410,6 +416,38 @@ class Drupal_to_WP {
 			
 			$searched_fields[] = $meta_field['field_name'];
 				
+		}
+		
+		// Search for table named for the node type
+		$types = drupal()->node->type->getUniqueValues();
+		
+		foreach( $types as $type ) {
+			
+			if( isset( drupal()->$type ) ) {
+				
+				$type_records = drupal()->$type->getRecords();
+				foreach( $type_records as $type_record ) {
+					
+					
+					if( ! array_key_exists( $type_record['nid'], self::$node_to_post_map ) )
+						continue;
+					
+					foreach( $type_record as $column => $value ) {
+						
+						if( empty( $value ) )
+							continue;
+						
+						update_post_meta(
+							self::$node_to_post_map[ $type_record['nid'] ],
+							'_drupal_' . $column,
+							$value
+						);
+						
+					}
+				}
+				
+			}
+			
 		}
 	}
 	
