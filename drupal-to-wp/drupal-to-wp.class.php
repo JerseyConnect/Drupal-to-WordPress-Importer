@@ -568,7 +568,7 @@ class Drupal_to_WP {
 			
 			$term_result = wp_set_object_terms(
 				self::$node_to_post_map[ $term_assignment['nid'] ],
-				array( self::$term_to_term_map[ (int)$term_assignment['tid'] ] ),
+				array( (int)self::$term_to_term_map[ (int)$term_assignment['tid'] ] ),
 				$term_vocab_map[ $term_assignment['tid'] ],
 				true
 			);
