@@ -79,21 +79,58 @@ class Drupal_to_WP {
 			)
 		);
 		
+		# Get node revision table
+		if( isset( drupal()->node_revisions ) )
+			$node_rev_table = 'node_revisions';
+		else if( isset( drupal()->node_revision ) )
+			$node_rev_table = 'node_revision';
+		
+		# Get url_alias column names
+		if( isset( drupal()->url_alias->src ) )
+			$alias_src_col = 'src';
+		else if( isset( drupal()->url_alias->source ) )
+			$alias_src_col = 'source';
+		
+		if( isset( drupal()->url_alias->dst ) )
+			$alias_dst_col = 'dst';
+		else if( isset( drupal()->url_alias->alias ) )
+			$alias_dst_col = 'alias';
+		
 		foreach( $nodes as $node ) {
 			
 			if( apply_filters( 'import_node_skip_node', false, $node ) )
 				continue;
 			
 			# Get content from latest revision
-			$node_content = drupal()->node_revisions->getRecord(
+			$node_content = drupal()->$node_rev_table->getRecord(
 				array(
 					'nid'  => $node['nid'],
 					'DESC' => 'timestamp'
 				)
 			);
 			
+			# For D7, get content from field_revision_body table
+			if( ! array_key_exists( 'body', $node_content ) ) {
+				
+				$node_revision_content = drupal()->field_revision_body->getRecord(
+					array(
+						'entity_id'   => $node['nid'],
+						'revision_id' => $node_content['vid']
+					)
+				);
+				
+				if( empty( $node_revision_content ) ) {
+					echo_now( 'Could not get content for nid: ' . $node['nid'] );
+					continue;
+				}
+				
+				$node_content['body']   = $node_revision_content['body_value'];
+				$node_content['teaser'] = $node_revision_content['body_summary'];
+				
+			}
+			
 			# Get timestamp from earliest revision and overwrite latest record
-			$node_creation = drupal()->node_revisions->getRecord(
+			$node_creation = drupal()->$node_rev_table->getRecord(
 				array(
 					'nid'  => $node['nid'],
 					'ASC' => 'timestamp'
@@ -104,9 +141,9 @@ class Drupal_to_WP {
 			
 			
 			# Get slug from url_alias table
-			$node_url = drupal()->url_alias->dst->getValue(
+			$node_url = drupal()->url_alias->$alias_dst_col->getValue(
 				array(
-					'src' => 'node/' . $node['nid']
+					$alias_src_col => 'node/' . $node['nid']
 				)
 			);
 			
@@ -197,9 +234,9 @@ class Drupal_to_WP {
 			self::$node_to_post_map[ $node['nid'] ] = $new_post_id;
 			
 			// Store all other URL aliases
-			$aliases = drupal()->url_alias->dst->getValues(
+			$aliases = drupal()->url_alias->$alias_dst_col->getValues(
 				array(
-					'src' => 'node/' . $node['nid']
+					$alias_src_col => 'node/' . $node['nid']
 				)
 			);
 			update_post_meta( $new_post_id, '_drupal_aliases', $aliases );
@@ -247,7 +284,13 @@ class Drupal_to_WP {
 		$searched_fields = array();
 		
 		# Add content field meta values as postmeta
-		$meta_fields = drupal()->content_node_field_instance->getRecords();
+		
+		if( isset( drupal()->content_node_field_instance ) )
+			$field_instance_table = 'content_node_field_instance';
+		else if( isset( drupal()->field_config_instance ) )
+			$field_instance_table = 'field_config_instance';
+		
+		$meta_fields = drupal()->$field_instance_table->getRecords();
 		
 		foreach( $meta_fields as $meta_field ) {
 			
@@ -258,6 +301,10 @@ class Drupal_to_WP {
 			
 			if( in_array( $meta_field['field_name'], $searched_fields ) )
 				continue;
+			
+			# D7 compatibility
+			if( ! array_key_exists( 'type_name', $meta_field ) )
+				$meta_field['type_name'] = $meta_field['entity_type'];
 			
 			if( isset( drupal()->$table_name ) ) {
 				
@@ -342,76 +389,82 @@ class Drupal_to_WP {
 
 				// Search the content_type_[content type] table for this value
 				$table_name = 'content_type_' . $meta_field['type_name'];
-//				echo 'Not a table - search content_type table: ' . $table_name . "<br>\n";
+				if( ! isset( drupal()->$table_name ) )
+					$table_name = 'field_revision_' . $meta_field['type_name'];
 				
-				$meta_records = drupal()->$table_name->getRecords();
 				
-				foreach( $meta_records as $meta_record ) {
+				if( isset( drupal()->$table_name ) ) {
+					$meta_records = drupal()->$table_name->getRecords();
 					
-					// Import all columns beginning with field_name
-					
-					if( ! array_key_exists( $meta_record['nid'], self::$node_to_post_map ) )
-						continue;
-					
-//					echo 'Adding metadata for: ' . self::$node_to_post_map[ $meta_record['nid'] ] . ' - ' . $meta_record[ $value_column ] . "<br>\n";
-					
-					foreach( $meta_record as $column => $value ) {
+					foreach( $meta_records as $meta_record ) {
 						
-						if( empty( $value ) )
+						// Import all columns beginning with field_name
+						
+						if( ! array_key_exists( $meta_record['nid'], self::$node_to_post_map ) )
 							continue;
 						
-						if( 0 !== strpos( $column, $meta_field['field_name'] ) )
-							continue;
+	//					echo 'Adding metadata for: ' . self::$node_to_post_map[ $meta_record['nid'] ] . ' - ' . $meta_record[ $value_column ] . "<br>\n";
 						
-						if( strpos( $column, '_fid' ) ) {
+						foreach( $meta_record as $column => $value ) {
 							
-							if( array_key_exists( (int)$value, self::$file_to_file_map ) )
+							if( empty( $value ) )
 								continue;
 							
-							// This is a "file ID" column - create attachment entry
+							if( 0 !== strpos( $column, $meta_field['field_name'] ) )
+								continue;
 							
-							$file = drupal()->files->getRecord( (int)$value );
+							if( strpos( $column, '_fid' ) ) {
+								
+								if( array_key_exists( (int)$value, self::$file_to_file_map ) )
+									continue;
+								
+								// This is a "file ID" column - create attachment entry
+								
+								$file = drupal()->files->getRecord( (int)$value );
+								
+								// Long files names will exceed guid length limit
+								$guid = $upload_dir['url'] . $file['filepath'];
+								if( 255 >= strlen( $guid ) )
+									$guid = substr( $guid, 0, 254 ); 
+								
+								$attachment = array(
+									'guid'           => $guid,
+									'post_mime_type' => $file['filemime'],
+									'post_title'     => preg_replace( '/\.[^.]+$/', '', $file['filename'] ),
+									'post_status'    => 'inherit',
+									'post_date'      => date('Y-m-d H:i:s', $file['timestamp'] ),
+									'post_date_gmt'  => date('Y-m-d H:i:s', $file['timestamp'] )
+								);
+								
+								$result = wp_insert_attachment(
+									$attachment,
+									$file['filename'],
+									self::$node_to_post_map[ $meta_record['nid'] ]
+								);
+								
+	//							echo 'Found a file attachment meta value: ' . $value . ' for key:' . $column . ' and node: ' . $meta_record['nid'] . "<br>\n";
+								
+								self::$file_to_file_map[ (int)$value ] = $result;
+								
+								add_post_meta(
+									$result,
+									'_drupal_fid',
+									$file['fid']
+								);
+								
+								$value = $result;
+							}
 							
-							// Long files names will exceed guid length limit
-							$guid = $upload_dir['url'] . $file['filepath'];
-							if( 255 >= strlen( $guid ) )
-								$guid = substr( $guid, 0, 254 ); 
-							
-							$attachment = array(
-								'guid'           => $guid,
-								'post_mime_type' => $file['filemime'],
-								'post_title'     => preg_replace( '/\.[^.]+$/', '', $file['filename'] ),
-								'post_status'    => 'inherit',
-								'post_date'      => date('Y-m-d H:i:s', $file['timestamp'] ),
-								'post_date_gmt'  => date('Y-m-d H:i:s', $file['timestamp'] )
+							update_post_meta(
+								self::$node_to_post_map[ $meta_record['nid'] ],
+								'_drupal_' . $column,
+								$value
 							);
-							
-							$result = wp_insert_attachment(
-								$attachment,
-								$file['filename'],
-								self::$node_to_post_map[ $meta_record['nid'] ]
-							);
-							
-//							echo 'Found a file attachment meta value: ' . $value . ' for key:' . $column . ' and node: ' . $meta_record['nid'] . "<br>\n";
-							
-							self::$file_to_file_map[ (int)$value ] = $result;
-							
-							add_post_meta(
-								$result,
-								'_drupal_fid',
-								$file['fid']
-							);
-							
-							$value = $result;
 						}
-						
-						update_post_meta(
-							self::$node_to_post_map[ $meta_record['nid'] ],
-							'_drupal_' . $column,
-							$value
-						);
 					}
-				}
+				
+				} // End if isset table
+				
 			}
 			
 			$searched_fields[] = $meta_field['field_name'];
@@ -463,7 +516,16 @@ class Drupal_to_WP {
 		
 		$vocab_map = array();
 		
-		$vocabs = drupal()->vocabulary->getRecords();
+		$dr_tax_prefix = '';
+		
+		if( isset( drupal()->vocabulary ) )
+			$dr_tax_prefix = '';
+		else if( isset( drupal()->taxonomy_vocabulary ) )
+			$dr_tax_prefix = 'taxonomy_';
+		
+		$dr_tax_vocab = $dr_tax_prefix . 'vocabulary';
+		
+		$vocabs = drupal()->$dr_tax_vocab->getRecords();
 		
 		foreach( $vocabs as $vocab ) {
 			
@@ -497,11 +559,14 @@ class Drupal_to_WP {
 		
 		$term_vocab_map = array();
 		
-		$terms = drupal()->term_data->getRecords();
+		$term_data_table = $dr_tax_prefix . 'term_data';
+		$term_hierarchy_table = $dr_tax_prefix. 'term_hierarchy';
+		
+		$terms = drupal()->$term_data_table->getRecords();
 		
 		foreach( $terms as $term ) {
 			
-			$parent = drupal()->term_hierarchy->parent->getValue(
+			$parent = drupal()->$term_hierarchy_table->parent->getValue(
 				array(
 					'tid' => $term['tid']
 				)
@@ -551,7 +616,12 @@ class Drupal_to_WP {
 		
 		# Attach terms to posts
 		
-		$term_assignments = drupal()->term_node->getRecords();
+		if( isset( drupal()->term_node ) )
+			$term_node_table = 'term_node';
+		else if( isset( drupal()->taxonomy_index ) )
+			$term_node_table = 'taxonomy_index';
+		
+		$term_assignments = drupal()->$term_node_table->getRecords();
 		
 		foreach( $term_assignments as $term_assignment ) {
 			
@@ -590,7 +660,12 @@ class Drupal_to_WP {
 		
 		echo_now( 'Importing comments...' );
 		
-		$comments = drupal()->comments->getRecords();
+		if( isset( drupal()->comments ) )
+			$comment_table = 'comments';
+		else if( isset( drupal()->comment ) )
+			$comment_table = 'comment';
+		
+		$comments = drupal()->$comment_table->getRecords();
 		
 		foreach( $comments as $comment ) {
 			
@@ -598,6 +673,21 @@ class Drupal_to_WP {
 				continue;
 			
 			$comment_author = array_key_exists( $comment['uid'], self::$user_to_user_map ) ? self::$user_to_user_map[ $comment['uid'] ] : 0;
+			
+			# D7 stores comment body as versioned metadata linked through the field_config_instance table
+			# But for this project, we're going to short circuit that and pull the data from the right table by name
+			if( ! array_key_exists( 'comment', $comment ) ) {
+				
+				$comment['comment'] = drupal()->field_data_comment_body->comment_body_value->getValue(
+					array(
+						'entity_id' => $comment['cid'],
+						'DESC'      => 'revision_id'
+					)
+				);
+				
+				$comment['timestamp'] = $comment['changed'];
+				
+			}
 			
 			wp_insert_comment(
 				array(
@@ -754,6 +844,9 @@ class Drupal_to_WP {
 		
 		foreach( $nodes as $node ) {
 			
+			if( ! array_key_exists( $node['nid'], self::$node_to_post_map ) )
+				continue;
+			
 			if( apply_filters( 'import_node_skip_node', false, $node ) )
 				continue;
 			
@@ -780,6 +873,5 @@ function echo_now( $message ) {
 	@ob_flush();
 	flush();
 }
-
 
 ?>

@@ -112,9 +112,15 @@ if(! isset( $_POST['content_map'] ) ) {
 	<?php
 	
 	# First get all Drupal vocabularies
-	$dr_vocabs = drupal()->vocabulary->name->getUniqueValues();
 	
-	# Allow importer to map Druapl taxonomies to WP taxonomies
+	if( isset( drupal()->vocabulary ) )
+		$dr_vocab_table = 'vocabulary';
+	else if( isset( drupal()->taxonomy_vocabulary ) )
+		$dr_vocab_table = 'taxonomy_vocabulary';
+	
+	$dr_vocabs = drupal()->$dr_vocab_table->name->getUniqueValues();
+	
+	# Allow importer to map Drupal taxonomies to WP taxonomies
 	$wp_taxes = array_map(
 		function( $value ) { 
 			return '<option>' . $value . '</option>'; 
