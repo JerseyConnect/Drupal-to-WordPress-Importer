@@ -290,6 +290,8 @@ class Drupal_to_WP {
 		else if( isset( drupal()->field_config_instance ) )
 			$field_instance_table = 'field_config_instance';
 		
+		$nid_field = 'nid';
+		
 		$meta_fields = drupal()->$field_instance_table->getRecords();
 		
 		foreach( $meta_fields as $meta_field ) {
@@ -306,6 +308,20 @@ class Drupal_to_WP {
 			if( ! array_key_exists( 'type_name', $meta_field ) )
 				$meta_field['type_name'] = $meta_field['entity_type'];
 			
+			# D7 compatibility
+			if( ! isset( drupal()->$table_name ) ) {
+				$table_name = 'field_revision_' . $meta_field['field_name'];
+			}
+			
+			# D7 compatibility
+			$files_table_name = 'files';
+			if( ! isset( drupal()->$files_table_name ) ) {
+				$files_table_name = 'file_managed';
+				$nid_field = 'entity_id';
+			}
+			
+//			echo_now( 'Searching: ' . $table_name );
+			
 			if( isset( drupal()->$table_name ) ) {
 				
 				// Found a content_field_name table -- add post meta from its columns
@@ -317,7 +333,7 @@ class Drupal_to_WP {
 					
 					// Import all columns beginning with field_name
 					
-					if( ! array_key_exists( $meta_record['nid'], self::$node_to_post_map ) )
+					if( ! array_key_exists( $meta_record[$nid_field], self::$node_to_post_map ) )
 						continue;
 					
 //					echo 'Adding metadata for: ' . self::$node_to_post_map[ $meta_record['nid'] ] . ' - ' . $meta_record[ $value_column ] . "<br>\n";
@@ -337,7 +353,14 @@ class Drupal_to_WP {
 							
 							// This is a "file ID" column - create attachment entry
 							
-							$file = drupal()->files->getRecord( (int)$value );
+							$file = drupal()->$files_table_name->getRecord( (int)$value );
+							
+							if( ! array_key_exists( 'filepath', $file ) ) {
+								
+								$path = parse_url( $file['uri'] );
+								$file['filepath'] = $path['path'];
+								
+							}
 							
 							// Long files names will exceed guid length limit
 							$guid = $upload_dir['url'] . $file['filepath'];
@@ -356,7 +379,7 @@ class Drupal_to_WP {
 							$result = wp_insert_attachment(
 								$attachment,
 								$file['filename'],
-								self::$node_to_post_map[ $meta_record['nid'] ]
+								self::$node_to_post_map[ $meta_record[$nid_field] ]
 							);
 							
 //							echo 'Found a file attachment meta value: ' . $value . ' for key:' . $column . ' and node: ' . $meta_record['nid'] . "<br>\n";
@@ -373,7 +396,7 @@ class Drupal_to_WP {
 						}
 						
 						add_post_meta(
-							self::$node_to_post_map[ $meta_record['nid'] ],
+							self::$node_to_post_map[ $meta_record[$nid_field] ],
 							'_drupal_' . $column,
 							$value
 						);
