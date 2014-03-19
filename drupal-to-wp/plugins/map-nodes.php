@@ -47,22 +47,19 @@ class MapNodeURL {
 		
 		self::load_map();
 		
-		$drupal_db = get_post_meta(
-			$post_ID,
-			'_drupal_database',
-			true
-		);
-		$drupal_nid = $node['nid'];
-		
-		$key = $drupal_db .'-'.$drupal_nid;
+		$key = self::get_key( $post_ID, $node );
 		
 		if( ! array_key_exists( $key, self::$map ) )
 			return;
+		
+//		echo_now( '1. Processing node: ' . $node['nid'] . '/ post: ' . $post_ID );
 		
 		switch( strtolower( self::$map[ $key ][ self::$map_fieldmap[ 'action' ] ] ) ) {
 			
 			case 'delete':   // Delete page and don't create redirects -- also cleans up metadata
 			
+//				echo_now( '2. Action = DELETE for node: ' . $node['nid'] );
+		
 				wp_delete_post(
 					$post_ID,
 					true
@@ -107,65 +104,41 @@ class MapNodeURL {
 				break;
 				
 			case 'keep':     // Keep node content in page at specified URL - if a page already exists there, merge contents
-				
+			case 'yes':
+			
+
+//				echo_now( '2. Action = KEEP for node: ' . $node['nid'] );
+
 				if( $result = get_page_by_path( untrailingslashit( self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] ) ) ) {
+
+//					echo_now('Checking to ensure parent page is in place:');
+
+					// Make sure the parent page is at its final URL
+					$parent_key = self::get_key( $result->ID );
 					
-					// A page already exists at the specified URL - merge the contents
+					if( $parent_key ) {
 					
-					$new_post = get_post( $post_ID );
+//						echo_now( 'Expected: ' . untrailingslashit( self::$map[ $parent_key ][ self::$map_fieldmap[ 'final_url' ] ] ) );
+//						echo_now( 'Current: ' . untrailingslashit( self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] ) );
+						
+						if( untrailingslashit( self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] ) != untrailingslashit( self::$map[ $parent_key ][ self::$map_fieldmap[ 'final_url' ] ] )) {
+							
+							echo_now('Parent page at wrong URL');
+							
+							// If the page is supposed to be somewhere else, move it now
+							
+							self::move_or_merge_page( $post_ID );
+							
+						}
 					
-					$content = $result->post_content;
-					$content .= "<br><br>" . $new_post->post_content;
-					
-					$updated_post = wp_update_post(
-						array(
-							'ID'           => $result->ID,
-							'post_content' => $content
-						)
-					);
-					
-					if( ! $updated_post )
-						echo 'ERROR updating post ' . $result->ID . ' : ' . "<br>\n";
-					
-					// Copy aliases to the combined post for potential redirection
-					update_post_meta(
-						$result->ID,
-						'_drupal_aliases',
-						array_merge(
-							maybe_unserialize(
-								get_post_meta( $result->ID, '_drupal_aliases', true )
-							),
-							maybe_unserialize(
-								get_post_meta( $post_ID, '_drupal_aliases', true )
-							)
-						)
-					);
-					
-					// Delete the merged post
-					wp_delete_post(
-						$post_ID,
-						true
-					);
-					
-				} else {
-					
-					// No page exists at the specified URL - move this page
-					
-					$last_page = self::make_page_tree(  self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] );
-					
-					wp_update_post(
-						array(
-							'ID'          => $post_ID,
-							'post_name'   => basename( self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] ),
-							'post_parent' => $last_page
-						)
-					);
+					}
 					
 				}
 				
+				self::move_or_merge_page( $post_ID, $node );
+				
 				break;
 			case 'nomerge':  // Keep node content at specified URL if possible, letting WP generate a different slug if needed
-			default:
 				
 				if( $result = get_page_by_path( untrailingslashit( self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] ) ) ) {
 					
@@ -188,6 +161,9 @@ class MapNodeURL {
 					);
 					
 				}
+				break;
+			default:
+				// Skip
 				break;
 		}
 		
@@ -229,6 +205,36 @@ class MapNodeURL {
 		return self::$has_map;
 	}
 	
+	/**
+	 * Generate index for final URL array
+	 */
+	private static function get_key( $post_ID, $node = array() ) {
+		
+		$drupal_db = get_post_meta(
+			$post_ID,
+			'_drupal_database',
+			true
+		);
+		
+		if( ! $drupal_db )
+			return false;
+		
+		if( ! empty( $node ) ) {
+			$drupal_nid = (int)$node['nid'];
+		} else {
+			$drupal_nid = (int)get_post_meta(
+				$post_ID,
+				'_drupal_nid',
+				true
+			);
+		}
+		
+		$key = $drupal_db .'-'.$drupal_nid;
+		
+		return $key;
+		
+	}
+	
 	public static function load_map() {
 		
 		if( ! empty( self::$map ) && 'memory' == NODEMAP_READ_MODE )
@@ -263,6 +269,8 @@ class MapNodeURL {
 					$line
 				);
 				
+				$line = array_map( 'trim', $line );
+				
 				$key = $line[ self::$map_fieldmap[ 'source_db' ] ] . '-' . $line[ self::$map_fieldmap[ 'source_nid' ] ];
 				
 				self::$map[ $key ] = $line;
@@ -282,6 +290,82 @@ class MapNodeURL {
 	}
 	
 	/**
+	 * Update the page to its specified final URL, merging with other pages if needed
+	 */
+	private static function move_or_merge_page( $post_ID, $node = array() ) {
+		
+		$key = self::get_key( $post_ID, $node );
+		
+		if( $result = get_page_by_path( untrailingslashit( self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] ) ) ) {
+			
+//			echo_now( '3. A page already exists at: ' . self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] . ' -- merging and deleting: ' . $node['nid'] );
+			
+//					echo_now( print_r( $result, true ) );
+			
+			// A page already exists at the specified URL - merge the contents
+			
+			$new_post = get_post( $post_ID );
+			
+			$content = $result->post_content;
+			$content .= "<br><br>" . $new_post->post_content;
+			
+			$updated_post = wp_update_post(
+				array(
+					'ID'           => $result->ID,
+					'post_content' => $content
+				)
+			);
+			
+			if( ! $updated_post )
+				echo 'ERROR updating post ' . $result->ID . ' : ' . "<br>\n";
+			
+			// Copy aliases to the combined post for potential redirection
+			update_post_meta(
+				$result->ID,
+				'_drupal_aliases',
+				array_merge(
+					(array)maybe_unserialize(
+						get_post_meta( $result->ID, '_drupal_aliases', true )
+					),
+					(array)maybe_unserialize(
+						get_post_meta( $post_ID, '_drupal_aliases', true )
+					)
+				)
+			);
+			
+			// Delete the merged post
+			wp_delete_post(
+				$post_ID,
+				true
+			);
+			
+		} else {
+			
+			// No page exists at the specified URL - move this page
+//			echo_now( '3. No page exists at: ' . self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] );
+			
+			$last_page = self::make_page_tree(  self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] );
+			
+//			echo_now( '6. Creating page: ' . basename( self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] ) . ' with parent: ' . $last_page );
+			
+			$update_result = wp_update_post(
+				array(
+					'ID'          => $post_ID,
+					'post_name'   => basename( self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] ),
+					'post_parent' => (int)$last_page
+				)
+			);
+			
+			if( ! $update_result )
+				echo_now( 'ERRROR - There was a problem moving post: ' . $post_ID );
+			
+//			print_r( get_post( $post_ID ) );
+			
+		}
+		
+	}
+	
+	/**
 	 * Identify or generate parent pages, returning the ID of the last descendant
 	 */
 	private static function make_page_tree( $path ) {
@@ -294,19 +378,61 @@ class MapNodeURL {
 		$last_page = 0;
 		
 		for( $x = 1; $x < count( $path_parts ); $x++ ) {
+			
+//			echo_now( '4. Checking: ' . implode( '/', array_slice( $path_parts, 0, $x ) ) );
 
-//			echo_now( 'Checking: ' . implode( '/', array_slice( $path_parts, 0, $x ) ) );
-
-			if( ! $last_page = get_page_by_path( implode( '/', array_slice( $path_parts, 0, $x ) ) ) ) {
+			if( $page = get_page_by_path( implode( '/', array_slice( $path_parts, 0, $x ) ) ) ) {
 				
-//				echo_now( 'Creating page: ' . $path_parts[ ( $x - 1 ) ] . ' at ' . implode( '/', array_slice( $path_parts, 0, $x ) ) . ' with parent: ' . $last_page );
+//				echo_now( '5. Page exists as: ' . $page->ID );
+				$last_page = $page->ID;
+
+//				echo_now('Checking to ensure parent page is in place:');
+
+				// Make sure the parent page is at its final URL
+				$parent_key = self::get_key( $page->ID );
+				
+				if( $parent_key ) {
+				
+//					echo_now( 'Expected: ' . untrailingslashit( self::$map[ $parent_key ][ self::$map_fieldmap[ 'final_url' ] ] ) );
+//					echo_now( 'Current: ' . untrailingslashit( implode( '/', array_slice( $path_parts, 0, $x ) ) ) );
+					
+					if( implode( '/', array_slice( $path_parts, 0, $x ) ) != untrailingslashit( self::$map[ $parent_key ][ self::$map_fieldmap[ 'final_url' ] ] )) {
+						
+//						echo_now('Parent page at wrong URL');
+						
+						// If the page is supposed to be somewhere else, move it now
+						
+						// Move to a temporary location to prevent path paradoxes
+						wp_update_post(
+							array(
+								'ID' => $page->ID,
+								'post_name' => $page->post_name . '-temp'
+							)
+						);
+						
+						self::move_or_merge_page( $page->ID );
+						
+					}
+					
+				}
+				
+			}
+			
+			if( $page = get_page_by_path( implode( '/', array_slice( $path_parts, 0, $x ) ) ) ) {
+			
+//				echo_now( '5. Page exists as: ' . $page->ID );
+				$last_page = $page->ID;
+				
+			} else {
+				
+//				echo_now( '5. Creating page: ' . $path_parts[ ( $x - 1 ) ] . ' at ' . implode( '/', array_slice( $path_parts, 0, $x ) ) . ' with parent: ' . $last_page );
 				
 				$last_page = wp_insert_post(
 					array(
 						'post_type'    => 'page',
 						'post_title'   => $path_parts[ ( $x - 1 ) ],
 						'post_name'    => strtolower( str_replace( ' ','-', $path_parts[ ( $x - 1 ) ] ) ),
-						'post_content' => 'Created by Drupal to WP importer',
+						'post_content' => apply_filters( 'new_parent_content', 'Created by Drupal to WP importer', $path_parts[ ( $x - 1 ) ], array() ),
 						'post_status'  => 'publish',
 						'post_parent'  => $last_page
 					)
@@ -322,9 +448,6 @@ class MapNodeURL {
 			}
 			
 		}
-		
-		if( is_object( $last_page ) )
-			$last_page = $last_page->ID;
 		
 		return $last_page;
 		
