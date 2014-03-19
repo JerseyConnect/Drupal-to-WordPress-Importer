@@ -33,11 +33,13 @@ class RedirectionImport {
 			)
 		);
 		
-		foreach( $aliases as $alias ) {
+		if( empty( $aliases ) ) {
+			
+			// If there are no aliases, create a redirect from the node URL
 			
 			Red_Item::create(
 				array(
-					'source'     => $alias,
+					'source'     => '/node/' . $node['nid'],
 					'target'     => get_permalink( $post_ID ),
 					'group'      => $group,
 					'match'      => 'url',
@@ -45,6 +47,24 @@ class RedirectionImport {
 				)
 			);
 			
+		} else {
+		
+			foreach( $aliases as $alias ) {
+				
+				// TODO: check for existing alias and notify if found
+				
+				Red_Item::create(
+					array(
+						'source'     => $alias,
+						'target'     => get_permalink( $post_ID ),
+						'group'      => $group,
+						'match'      => 'url',
+						'red_action' => 'url'
+					)
+				);
+				
+			}
+		
 		}
 		
 	}
