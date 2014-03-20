@@ -69,7 +69,7 @@ if(! isset( $_POST['content_map'] ) ) {
 	<form method="post">
 	
 	<p>
-		<input type="checkbox" id="erase" name="erase" checked="true">
+		<input type="checkbox" id="erase" name="erase">
 		<label for="erase">Erase WP content before importing from Drupal?</label>
 	</p>
 	<p>
