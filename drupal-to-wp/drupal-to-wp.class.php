@@ -800,8 +800,11 @@ class Drupal_to_WP {
 				
 				echo 'WARNING - Got error creating user: ' . $user['name'];
 				
-				if( in_array( 'existing_user_login', $user_id->get_error_codes() ) ) {
-					echo ' -- user already exists' . "<br>\n";
+				if(
+					in_array( 'existing_user_login', $user_id->get_error_codes() ) || 
+					in_array( 'existing_user_email', $user_id->get_error_codes() ) 
+				) {
+					echo_now(' -- user already exists' );
 					
 					$wpuser = get_user_by( 'login', $user['name'] );
 					self::$user_to_user_map[ $user['uid'] ] = $wpuser->ID;
