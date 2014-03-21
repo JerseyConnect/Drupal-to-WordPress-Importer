@@ -534,6 +534,40 @@ class Drupal_to_WP {
 			}
 			
 		}
+		
+		// Check for uploaded files
+		
+		if( isset( drupal()->upload ) ) {
+			
+			$uploads = drupal()->upload->getRecords();
+			
+			foreach( $uploads as $upload ) {
+				
+				$node = drupal()->node->getRecord(
+					array(
+						'nid' => $upload['nid']
+					)
+				);
+				
+				if( apply_filters( 'import_node_skip_node', false, $node ) )
+					continue;
+				
+				$file = drupal()->files->getRecord(
+					array(
+						'fid' => $upload['fid']
+					)
+				);
+				
+				add_post_meta(
+					self::$node_to_post_map[ $upload['nid'] ],
+					'_drupal_uploaded_file',
+					$file['filepath']
+				);
+				
+			}
+			
+		}
+		
 	}
 	
 	/**
