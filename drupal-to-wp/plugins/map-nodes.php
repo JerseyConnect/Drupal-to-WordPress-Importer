@@ -163,7 +163,44 @@ class MapNodeURL {
 				}
 				break;
 			default:
-				// Skip
+				
+//				echo_now( 'Got an unknown action: ' . strtolower( self::$map[ $key ][ self::$map_fieldmap[ 'action' ] ] ) . 'for post: ' . $post_ID );
+				
+				// If the action is the name of a different post type, convert the post
+				$post_types = get_post_types( '', 'names' );
+				
+				$post_type = apply_filters(
+					'map_nodes_change_post_type',
+					strtolower( self::$map[ $key ][ self::$map_fieldmap[ 'action' ] ] ),
+					$post_ID,
+					$node
+				);
+				
+				if( in_array( $post_type, $post_types ) ) {
+					
+					$update_result = wp_update_post(
+						array(
+							'ID'        => $post_ID,
+							'post_type' => $post_type
+						)
+					);
+					
+					do_action(
+						'map_nodes_after_change_post_type',
+						$post_type,
+						strtolower( self::$map[ $key ][ self::$map_fieldmap[ 'action' ] ] ),
+						$post_ID,
+						$node
+					);
+					
+					if( ! $update_result )
+						echo_now( 'ERROR changing post type for post ID: ' . $post_ID );
+					
+				}
+				
+				// Otherwise, skip it
+				return;	
+				
 				break;
 		}
 		
@@ -199,6 +236,7 @@ class MapNodeURL {
 		} else if( file_exists( self::get_map_path() . DIRECTORY_SEPARATOR . $global_file_name ) ) {
 			self::$has_map = true;
 		} else {
+			echo_now( 'No map file found -- skipping mapping phase' );
 			self::$has_map = false;
 		}
 		
@@ -423,6 +461,12 @@ class MapNodeURL {
 //				echo_now( '5. Page exists as: ' . $page->ID );
 				$last_page = $page->ID;
 				
+				do_action(
+					'map_existing_parent',
+					$page
+				);
+				
+				
 			} else {
 				
 //				echo_now( '5. Creating page: ' . $path_parts[ ( $x - 1 ) ] . ' at ' . implode( '/', array_slice( $path_parts, 0, $x ) ) . ' with parent: ' . $last_page );
@@ -430,7 +474,7 @@ class MapNodeURL {
 				$last_page = wp_insert_post(
 					array(
 						'post_type'    => 'page',
-						'post_title'   => $path_parts[ ( $x - 1 ) ],
+						'post_title'   => ucwords( str_replace( '_', ' ', $path_parts[ ( $x - 1 ) ] ) ),
 						'post_name'    => strtolower( str_replace( ' ','-', $path_parts[ ( $x - 1 ) ] ) ),
 						'post_content' => apply_filters( 'new_parent_content', 'Created by Drupal to WP importer', $path_parts[ ( $x - 1 ) ], array() ),
 						'post_status'  => 'publish',
