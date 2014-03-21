@@ -2,7 +2,7 @@
 
 /**
  * Conversion filter for Redirection
- * Create redirects for all Drupal aliases to the new URL for a post or page
+ * Create redirects for all Drupal aliases to the new URL for a post or page.
  */
 
 define( 'REDIRECTIONIMPORT_GROUP_NAME', 'Drupal Conversion' );
@@ -73,6 +73,8 @@ class RedirectionImport {
 		
 		if( self::$redirect_group_id )
 			return self::$redirect_group_id;
+		
+		echo_now( 'Building redirects...' );
 		
 		global $wpdb;
 		
