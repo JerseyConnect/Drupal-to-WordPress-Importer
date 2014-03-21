@@ -1,10 +1,15 @@
 <?php
 
-function drupal() {
+function drupal( $database = null ) {
 	
 	static $drupalLink;
-	if( ! $drupalLink )
-		$drupalLink = new AutoDB( DR_HOST, DR_DB , DR_USER, DR_PASS );
+	if( ! $drupalLink ) {
+		if( empty( $database ) )
+			$database = DR_DB;
+		$drupalLink = new AutoDB( DR_HOST, $database, DR_USER, DR_PASS );
+	} else if( ! empty( $database ) && $drupalLink->dbName != $database ) {
+		$drupalLink = new AutoDB( DR_HOST, $database, DR_USER, DR_PASS );
+	}
 	return $drupalLink;
 	
 }
@@ -58,6 +63,10 @@ class Drupal_to_WP {
 	static function importNodes( $type_map, $node_extras ) {
 		
 		extract( $node_extras );
+		
+		if( empty( $add_cat_map ) ) {
+			echo_now( 'No category map found for nodes...' );
+		}
 		
 		echo_now( 'Importing posts...');
 		
@@ -891,10 +900,12 @@ class Drupal_to_WP {
 	
 }
 
-function echo_now( $message ) {
-	echo str_pad($message . '<br>', 16384) . "\n";
-	@ob_flush();
-	flush();
+if( ! function_exists( 'echo_now' ) ) {
+	function echo_now( $message ) {
+		echo str_pad($message . '<br>', 16384) . "\n";
+		@ob_flush();
+		flush();
+	}
 }
 
 ?>

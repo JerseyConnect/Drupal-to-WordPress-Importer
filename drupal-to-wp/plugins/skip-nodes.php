@@ -15,6 +15,7 @@ class SkipNodeImport {
 	
 	public static $has_skip_file = 'unknown';
 	private static $skiplist_path = false;
+	private static $skiplist_db   = false;
 	private static $skips = array();
 	
 	public static function is_node_skipped( $result, $node ) {
@@ -51,6 +52,11 @@ class SkipNodeImport {
 	
 	public static function has_skip_file() {
 		
+		if( drupal()->dbName != self::$skiplist_db ) {
+			self::$has_skip_file = null;
+			self::$skips = array();
+		}
+		
 		if( false === self::$has_skip_file )
 			return false;
 		if( true === self::$has_skip_file )
@@ -63,6 +69,7 @@ class SkipNodeImport {
 			return true;
 		} else {
 			self::$has_skip_file = false;
+			echo_now( 'No skip list found for: ' . drupal()->dbName() );
 			return false;
 		}
 		
@@ -73,7 +80,9 @@ class SkipNodeImport {
 		if( ! empty( self::$skips ) )
 			return;
 		
-		echo 'Loading node skip list for: ' . drupal()->dbName . "<br>\n";
+		self::$skiplist_db = drupal()->dbName;
+		
+		echo_now( 'Loading node skip list for: ' . drupal()->dbName );
 		
 		$file_name = drupal()->dbName . '_skip.txt';
 		self::$skips = file( self::get_skiplist_path() . DIRECTORY_SEPARATOR . $file_name );
