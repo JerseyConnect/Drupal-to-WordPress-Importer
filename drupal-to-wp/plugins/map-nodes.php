@@ -138,6 +138,17 @@ class MapNodeURL {
 				
 				self::move_or_merge_page( $post_ID, $node );
 				
+				if( ! empty( self::$map_fieldmap[ 'post_title' ] ) && get_the_title( $post_ID ) != self::$map[ $key ][ self::$map_fieldmap[ 'post_title' ] ] ) {
+					
+					wp_update_post(
+						array(
+							'ID' => $post_ID,
+							'post_title' => self::$map[ $key ][ self::$map_fieldmap[ 'post_title' ] ]
+						)
+					);
+					
+				}
+				
 				break;
 			case 'nomerge':  // Keep node content at specified URL if possible, letting WP generate a different slug if needed
 				
@@ -162,6 +173,18 @@ class MapNodeURL {
 					);
 					
 				}
+				
+				if( ! empty( self::$map_fieldmap[ 'post_title' ] ) && get_the_title( $post_ID ) != self::$map[ $key ][ self::$map_fieldmap[ 'post_title' ] ] ) {
+					
+					wp_update_post(
+						array(
+							'ID' => $post_ID,
+							'post_title' => self::$map[ $key ][ self::$map_fieldmap[ 'post_title' ] ]
+						)
+					);
+					
+				}
+				
 				break;
 			default:
 				
@@ -196,6 +219,17 @@ class MapNodeURL {
 					
 					if( ! $update_result )
 						echo_now( 'ERROR changing post type for post ID: ' . $post_ID );
+					
+				}
+				
+				if( ! empty( self::$map_fieldmap[ 'post_title' ] ) && get_the_title( $post_ID ) != self::$map[ $key ][ self::$map_fieldmap[ 'post_title' ] ] ) {
+					
+					wp_update_post(
+						array(
+							'ID' => $post_ID,
+							'post_title' => self::$map[ $key ][ self::$map_fieldmap[ 'post_title' ] ]
+						)
+					);
 					
 				}
 				
