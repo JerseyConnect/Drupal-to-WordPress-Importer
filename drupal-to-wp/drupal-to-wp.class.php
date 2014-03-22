@@ -791,7 +791,7 @@ class Drupal_to_WP {
 
 		# Get all roles and index by rid
 		$roles = drupal()->role->getRecords();
-
+		
 		$drupal_roles = array();
 		foreach( $roles as $role ):
 			$drupal_roles[ (int)$role['rid'] ] = $role['name'];
@@ -834,13 +834,16 @@ class Drupal_to_WP {
 				
 				echo 'WARNING - Got error creating user: ' . $user['name'];
 				
-				if(
-					in_array( 'existing_user_login', $user_id->get_error_codes() ) || 
-					in_array( 'existing_user_email', $user_id->get_error_codes() ) 
-				) {
-					echo_now(' -- user already exists' );
+				if( in_array( 'existing_user_login', $user_id->get_error_codes() ) ) {
+					echo ' -- user already exists' . "<br>\n";
 					
 					$wpuser = get_user_by( 'login', $user['name'] );
+					self::$user_to_user_map[ $user['uid'] ] = $wpuser->ID;
+				
+				} else if( in_array( 'existing_user_email', $user_id->get_error_codes() ) ) {
+					echo ' -- user already exists' . "<br>\n";
+					
+					$wpuser = get_user_by( 'email', $user['mail'] );
 					self::$user_to_user_map[ $user['uid'] ] = $wpuser->ID;
 					
 				} else {
