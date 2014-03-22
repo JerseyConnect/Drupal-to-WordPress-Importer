@@ -37,7 +37,8 @@ class MapNodeURL {
 		'source_db'  => 'Drupal site',
 		'source_nid' => 'Drupal ID',
 		'action'     => 'Action',
-		'final_url'  => 'Final URL'
+		'final_url'  => 'Final URL',
+		'post_title' => 'Page Title'
 	);
 	
 	public static function process_node( $post_ID, $node ) {
@@ -123,7 +124,7 @@ class MapNodeURL {
 						
 						if( untrailingslashit( self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] ) != untrailingslashit( self::$map[ $parent_key ][ self::$map_fieldmap[ 'final_url' ] ] )) {
 							
-							echo_now('Parent page at wrong URL');
+//							echo_now('Parent page at wrong URL');
 							
 							// If the page is supposed to be somewhere else, move it now
 							
@@ -336,7 +337,11 @@ class MapNodeURL {
 		
 		if( $result = get_page_by_path( untrailingslashit( self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] ) ) ) {
 			
-//			echo_now( '3. A page already exists at: ' . self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] . ' -- merging and deleting: ' . $node['nid'] );
+			// If the page is already in place, we are done
+			if( $result->ID == $post_ID )
+				return;
+			
+//			echo_now( '3. A page already exists at: ' . self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] . ' -- merging with: ' . $result->ID . ' and deleting: ' . $node['nid'] );
 			
 //					echo_now( print_r( $result, true ) );
 			
@@ -370,6 +375,35 @@ class MapNodeURL {
 					)
 				)
 			);
+			
+			// Move any child posts to the new parent
+			$children = get_children(
+				array(
+					'post_parent' => $post_ID,
+					'post_type'   => 'page'
+				)
+			);
+			
+//			echo_now( 'Moving any children of the post to be deleted' );
+			
+			if( ! empty( $children ) ) {
+				foreach( $children as $child_page ) {
+					
+//					echo_now( 'Moving orphaned post: ' . $child_page->ID . ' to ' . $result->ID );
+					
+					$update_result = wp_update_post(
+						array(
+							'ID' => $child_page->ID,
+							'post_parent' => (int)$result->ID
+						)
+					);
+					
+					if( ! $update_result )
+						echo_now( 'Error moving child page to merged parent' );
+					
+				}
+				
+			}
 			
 			// Delete the merged post
 			wp_delete_post(
