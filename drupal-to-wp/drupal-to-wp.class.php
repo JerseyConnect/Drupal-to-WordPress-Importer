@@ -208,11 +208,11 @@ class Drupal_to_WP {
 			}
 			
 			$post_data = array(
-				'post_content'   => preg_replace( '/[^(\x20-\x7F)]*/', '', $node_content['body'] ),
+				'post_content'   => trim( preg_replace( '/[^(\x20-\x7F)]*/', '', $node_content['body'] ) ),
 				'post_date'      => date( 'Y-m-d H:i:s', $node_content['timestamp'] ),
 //				'post_date_gmt'  => date( 'Y-m-d H:i:s', $node_content['timestamp'] ),
 				'most_modified'  => date( 'Y-m-d H:i:s', $node_content['mod_timestamp'] ),
-				'post_excerpt'   => strip_tags( $node_content['teaser'] ),
+				'post_excerpt'   => trim( strip_tags( $node_content['teaser'] ) ),
 				'post_name'      => basename( $node_url ),
 				'post_author'    => $post_author,
 				'post_parent'    => (int)$parent_page,
