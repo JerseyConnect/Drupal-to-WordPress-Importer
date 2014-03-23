@@ -552,18 +552,22 @@ class Drupal_to_WP {
 				if( apply_filters( 'import_node_skip_node', false, $node ) )
 					continue;
 				
+				if( ! array_key_exists( $upload['nid'], self::$node_to_post_map ) )
+					continue;
+				
 				$file = drupal()->files->getRecord(
 					array(
 						'fid' => $upload['fid']
 					)
 				);
 				
-				add_post_meta(
-					self::$node_to_post_map[ $upload['nid'] ],
-					'_drupal_uploaded_file',
-					$file['filepath']
-				);
-				
+				if( ! empty( $file ) ) {
+					add_post_meta(
+						self::$node_to_post_map[ $upload['nid'] ],
+						'_drupal_uploaded_file',
+						$file['filepath']
+					);
+				}
 			}
 			
 		}
