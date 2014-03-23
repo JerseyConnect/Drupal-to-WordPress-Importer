@@ -383,8 +383,12 @@ class MapNodeURL {
 			
 			$new_post = get_post( $post_ID );
 			
-			$content = $result->post_content;
-			$content .= "<br><br>" . $new_post->post_content;
+			$content = apply_filters(
+				'map_nodes_merge_content',
+				$result->post_content . "<br><br>" . $new_post->content,
+				$new_post,
+				$result
+			);
 			
 			$updated_post = wp_update_post(
 				array(
