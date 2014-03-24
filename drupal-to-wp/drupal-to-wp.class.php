@@ -327,6 +327,16 @@ class Drupal_to_WP {
 			if( ! isset( drupal()->$files_table_name ) ) {
 				$files_table_name = 'file_managed';
 				$nid_field = 'entity_id';
+				
+				$public_path = trailingslashit( 
+						unserialize(
+						drupal()->variable->value->getValue(
+							array(
+								'name' => 'file_public_path'
+							)
+						)
+					)
+				);
 			}
 			
 //			echo_now( 'Searching: ' . $table_name );
@@ -367,12 +377,29 @@ class Drupal_to_WP {
 							if( ! array_key_exists( 'filepath', $file ) ) {
 								
 								$path = parse_url( $file['uri'] );
-								$file['filepath'] = $path['path'];
+								
+								if( false !== strpos( $file['uri'], 'public://') ) {
+									
+									$file['filepath'] = str_replace( 'public://', $public_path, $file['uri'] );
+									
+								} else {
+									
+									// This is a youtube link or something -- hand it off and keep going
+									
+									do_action(
+										'metadata_import_unknown_path',
+										$file,
+										self::$node_to_post_map[ $meta_record[ $nid_field ] ]
+									);
+									
+									continue;
+									
+								}
 								
 							}
 							
 							// Long files names will exceed guid length limit
-							$guid = $upload_dir['url'] . $file['filepath'];
+							$guid = trailingslashit( $upload_dir['url'] ) . $file['filepath'];
 							if( 255 >= strlen( $guid ) )
 								$guid = substr( $guid, 0, 254 ); 
 							
