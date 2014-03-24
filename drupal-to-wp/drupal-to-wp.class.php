@@ -398,6 +398,8 @@ class Drupal_to_WP {
 								
 							}
 							
+							$filename = $upload_dir['basedir'] . $file['filepath'];
+							
 							// Long files names will exceed guid length limit
 							$guid = trailingslashit( $upload_dir['url'] ) . $file['filepath'];
 							if( 255 >= strlen( $guid ) )
@@ -414,7 +416,7 @@ class Drupal_to_WP {
 							
 							$result = wp_insert_attachment(
 								$attachment,
-								$file['filename'],
+								$filename,
 								self::$node_to_post_map[ $meta_record[$nid_field] ]
 							);
 							
