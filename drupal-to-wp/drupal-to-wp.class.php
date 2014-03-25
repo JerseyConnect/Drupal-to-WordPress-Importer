@@ -64,6 +64,8 @@ class Drupal_to_WP {
 		
 		extract( $node_extras );
 		
+		self::$node_to_post_map = array();
+		
 		if( empty( $add_cat_map ) ) {
 			echo_now( 'No category map found for nodes...' );
 		}
