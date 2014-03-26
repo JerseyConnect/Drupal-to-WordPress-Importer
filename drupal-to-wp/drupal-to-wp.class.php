@@ -223,7 +223,13 @@ class Drupal_to_WP {
 				'post_title'     => $node['title'],
 				'post_type'      => $type_map[ $node['type'] ]
 			);
-
+			
+			$post_data = apply_filters(
+				'import_node_pre',
+				$post_data,
+				$node
+			);
+			
 			$post_data = apply_filters(
 				sprintf( 'import_node_pre_%s', $node['type'] ),
 				$post_data,
