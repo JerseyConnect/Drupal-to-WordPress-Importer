@@ -50,7 +50,7 @@ class MapNodeURL {
 		
 		$key = self::get_key( $post_ID, $node );
 		
-		if( ! array_key_exists( $key, self::$map ) )
+		if( empty( $key ) || ! array_key_exists( $key, self::$map ) )
 			return;
 		
 //		echo_now( '1. Processing node: ' . $node['nid'] . '/ post: ' . $post_ID );

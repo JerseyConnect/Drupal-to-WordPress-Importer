@@ -69,7 +69,8 @@ class SkipNodeImport {
 			return true;
 		} else {
 			self::$has_skip_file = false;
-			echo_now( 'No skip list found for: ' . drupal()->dbName() );
+			self::$skiplist_db = drupal()->dbName;
+			echo_now( 'No skip list found for: ' . drupal()->dbName );
 			return false;
 		}
 		
