@@ -258,30 +258,83 @@ class Drupal_to_WP {
 			);
 			update_post_meta( $new_post_id, '_drupal_aliases', $aliases );
 			
-			// Add tags / categories if requested
+			/**
+			 * Add tags / categories if requested
+			 */
+
+			$cat_tax = apply_filters(
+				'add_cat_tax_map',
+				'category',
+				$type_map[ $node['type' ] ]
+			);
+			
+			$tag_tax = apply_filters(
+				'add_tag_tax_map',
+				'post_tag',
+				$type_map[ $node['type' ] ]
+			);
 			
 			if( array_key_exists( $node['type'], $add_tag_map ) ) {
-				wp_set_post_tags(
-					$new_post_id,
-					$add_tag_map[ $node['type'] ],
-					true
-				);
+				
+				if( 'post_tag' == $tag_tax ) {
+					
+					wp_set_post_tags(
+						$new_post_id,
+						$add_tag_map[ $node['type'] ],
+						true
+					);
+					
+				} else {
+					
+//					echo_now( 'Adding tag to a custom taxonomy: ' . $cat_tax );
+					
+					wp_set_object_terms(
+						$new_post_id,
+						$add_tag_map[ $node['type'] ],
+						$tag_tax,
+						true
+					);
+					
+					if( ! $tax_result )
+						echo_now( 'ERROR adding tag as custom taxonomy' );
+					
+				}
 			}
 			
 			if( ! function_exists( 'wp_create_category' ) )
 				require WP_PATH . '/wp-admin/includes/taxonomy.php';
 			
-			if( array_key_exists( $node['type'], $add_cat_map ) ) {
+			if( array_key_exists( $node['type'], $add_cat_map ) && ! empty( $add_cat_map[ $node['type'] ] ) ) {
 				
-				$term = term_exists( $add_cat_map[ $node['type'] ], 'category' );
-				if( ! $term ) {
-					$term = wp_create_category( $add_cat_map[ $node['type'] ] );
+				if( 'category' == $cat_tax ) {
+				
+					$term = term_exists( $add_cat_map[ $node['type'] ], 'category' );
+					if( ! $term ) {
+						$term = wp_create_category( $add_cat_map[ $node['type'] ] );
+					}
+					
+					wp_set_post_categories(
+						$new_post_id,
+						$term
+					);
+					
+				} else {
+					
+//					echo_now( 'Adding category to a custom taxonomy: ' . $cat_tax );
+					
+					$tax_result = wp_set_object_terms(
+						$new_post_id,
+						$add_cat_map[ $node['type'] ],
+						$cat_tax,
+						true
+					);
+					
+					if( ! $tax_result ) {
+						echo_now( 'ERROR adding category as custom taxonomy' );
+					}
+					
 				}
 				
-				wp_set_post_categories(
-					$new_post_id,
-					$term
-				);
 			}
 			
 			// TODO: Import revisions (?)
