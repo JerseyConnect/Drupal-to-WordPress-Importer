@@ -385,7 +385,7 @@ class MapNodeURL {
 			
 			$content = apply_filters(
 				'map_nodes_merge_content',
-				$result->post_content . "<br><br>" . $new_post->content,
+				$result->post_content . "<br><br>" . $new_post->post_content,
 				$new_post,
 				$result
 			);
