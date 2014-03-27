@@ -492,6 +492,15 @@ class Drupal_to_WP {
 							);
 							
 							$value = $result;
+							
+							// If this was an image, set it as the featured image unless the post already has one
+							if( false !== strpos( $file['filemime'], 'image' ) && ! has_post_thumbnail( self::$node_to_post_map[ $meta_record[$nid_field] ] ) ) {
+								set_post_thumbnail(
+									self::$node_to_post_map[ $meta_record[$nid_field] ],
+									$result
+								);
+							}
+							
 						}
 						
 						add_post_meta(
