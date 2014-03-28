@@ -52,6 +52,7 @@ foreach( $import as $site_name => $site ) {
 		Drupal_to_WP::importComments();
 		
 		Drupal_to_WP::postProcessNodes( $site['content_map'] );
+		Drupal_to_WP::postProcessSite();
 		
 	}
 	

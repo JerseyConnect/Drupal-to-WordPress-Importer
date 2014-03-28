@@ -201,6 +201,8 @@ if(! isset( $_POST['content_map'] ) ) {
 	endif;
 	
 	Drupal_to_WP::postProcessNodes( $_POST['content_map'] );
+	Drupal_to_WP::postProcessSite();
+	
 
 	echo "<br>" . 'All done!' . "<br>\n";
 

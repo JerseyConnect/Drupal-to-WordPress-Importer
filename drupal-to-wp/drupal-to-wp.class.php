@@ -1041,6 +1041,21 @@ class Drupal_to_WP {
 		
 	}
 	
+	/**
+	 * Perform any final operations on the Drupal site
+	 */
+	static function postProcessSite() {
+		
+		do_action(
+			'import_postprocess',
+			self::$node_to_post_map,
+			self::$user_to_user_map,
+			self::$term_to_term_map,
+			self::$file_to_file_map
+		);
+		
+	}
+	
 }
 
 if( ! function_exists( 'echo_now' ) ) {
