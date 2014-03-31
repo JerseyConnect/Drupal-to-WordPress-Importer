@@ -70,6 +70,8 @@ class Drupal_to_WP {
 			echo_now( 'No category map found for nodes...' );
 		}
 		
+		kses_remove_filters();
+		
 		echo_now( 'Importing posts...');
 		
 		# Build array of types that aren't being skipped
@@ -1053,6 +1055,8 @@ class Drupal_to_WP {
 			self::$term_to_term_map,
 			self::$file_to_file_map
 		);
+		
+		kses_init_filters();
 		
 	}
 	
