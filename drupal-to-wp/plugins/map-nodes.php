@@ -13,7 +13,7 @@ define( 'NODEMAP_MAP_PATH', './nodemaps' );
 define( 'NODEMAP_READ_MODE', 'memory' ); 
 // one of: memory, streaming depending on your needs -- memory is much faster, but streaming scales infinitely
 
-add_filter( 'import_node_postprocess', array( 'MapNodeURL', 'process_node' ), 1, 2 );
+add_action( 'import_node_postprocess', array( 'MapNodeURL', 'process_node' ), 1, 2 );
 
 class MapNodeURL {
 	
@@ -131,7 +131,7 @@ class MapNodeURL {
 							self::move_or_merge_page( $post_ID );
 							
 						}
-					
+						
 					}
 					
 				}
@@ -401,7 +401,7 @@ class MapNodeURL {
 				echo 'ERROR updating post ' . $result->ID . ' : ' . "<br>\n";
 			
 			// Copy aliases to the combined post for potential redirection
-			update_post_meta(
+			$update_result = update_post_meta(
 				$result->ID,
 				'_drupal_aliases',
 				array_merge(
@@ -413,6 +413,23 @@ class MapNodeURL {
 					)
 				)
 			);
+			
+			if( ! $update_result )
+				echo_now( 'ERROR updating aliases for merged page' );
+			
+			// If the merged page does not have a Drupal NID, call import_node_postprocess on this one
+			//   since it will be skipped later
+			if( ! get_post_meta( $result->ID, '_drupal_nid', true ) ) {
+				
+				remove_action( 'import_node_postprocess', array( 'MapNodeURL', 'process_node' ), 1, 2 );
+				do_action(
+					'import_node_postprocess',
+					$result->ID,
+					$node
+				);
+				add_action( 'import_node_postprocess', array( 'MapNodeURL', 'process_node' ), 1, 2 );
+				
+			}
 			
 			// Move any child posts to the new parent
 			$children = get_children(

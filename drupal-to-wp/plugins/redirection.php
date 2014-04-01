@@ -25,6 +25,9 @@ class RedirectionImport {
 		if( ! $group )
 			return;
 		
+		if( ! get_post( $post_ID ) )
+			return;
+		
 		$aliases = maybe_unserialize(
 			get_post_meta(
 				$post_ID,
@@ -131,6 +134,21 @@ class RedirectionImport {
 			
 		}
 		
+	}
+	
+	public static function get_group_id() {
+
+		global $wpdb;
+		
+		$group_table_name = $wpdb->prefix . 'redirection_groups';
+		
+		$group_ID = wordpress()->$group_table_name->id->getValue(
+			array(
+				'name' => REDIRECTIONIMPORT_GROUP_NAME
+			)
+		);
+		
+		return $group_ID;
 	}
 	
 }
