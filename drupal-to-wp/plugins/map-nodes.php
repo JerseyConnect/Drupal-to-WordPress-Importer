@@ -404,12 +404,14 @@ class MapNodeURL {
 			$update_result = update_post_meta(
 				$result->ID,
 				'_drupal_aliases',
-				array_merge(
-					(array)maybe_unserialize(
-						get_post_meta( $result->ID, '_drupal_aliases', true )
-					),
-					(array)maybe_unserialize(
-						get_post_meta( $post_ID, '_drupal_aliases', true )
+				array_filter(
+					array_merge(
+						(array)maybe_unserialize(
+							get_post_meta( $result->ID, '_drupal_aliases', true )
+						),
+						(array)maybe_unserialize(
+							get_post_meta( $post_ID, '_drupal_aliases', true )
+						)
 					)
 				)
 			);
