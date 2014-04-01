@@ -350,6 +350,8 @@ class Drupal_to_WP {
 	 */
 	static function importMetadata() {
 		
+		include_once( ABSPATH . 'wp-admin/includes/image.php' );
+		
 		echo_now( 'Importing metadata...' );
 		
 		$upload_dir = wp_upload_dir();
@@ -494,6 +496,12 @@ class Drupal_to_WP {
 							);
 							
 							$value = $result;
+							
+							// If this as an image, build thumbnails and other data
+							if( false !== strpos( $file['filemime'], 'image' ) ) {
+								$image_meta = wp_generate_attachment_metadata( $result, $filename );
+								wp_update_attachment_metadata( $result, $image_meta );
+							}
 							
 							// If this was an image, set it as the featured image unless the post already has one
 							if( false !== strpos( $file['filemime'], 'image' ) && ! has_post_thumbnail( self::$node_to_post_map[ $meta_record[$nid_field] ] ) ) {
@@ -885,7 +893,9 @@ class Drupal_to_WP {
 	static function importUsers( $role_map ) {
 
 		echo_now( 'Importing users...' );
-
+		
+		self::$user_to_user_map = array();
+		
 		# Generate a pseudo-random password - CHANGE YOUR PASSWORDS AFTER IMPORT
 		$password = 'password';
 		for( $x = 0; $x < strlen( $password ); $x++ ) {
