@@ -30,6 +30,11 @@ class Drupal_to_WP {
 	static $user_to_user_map = array();
 	static $file_to_file_map = array();
 	
+	// Files constants for uploaded files handling
+	static $files_table_name = 'files';
+	static $files_upload_path = '';
+	static $files_public_path = '';
+	
 	/**
 	 * Clear out an existing WP install before importing if specified by user
 	 */
@@ -354,7 +359,7 @@ class Drupal_to_WP {
 		
 		echo_now( 'Importing metadata...' );
 		
-		$upload_dir = wp_upload_dir();
+		self::$files_upload_path = wp_upload_dir();
 		$searched_fields = array();
 		
 		# Add content field meta values as postmeta
@@ -388,12 +393,12 @@ class Drupal_to_WP {
 			}
 			
 			# D7 compatibility
-			$files_table_name = 'files';
-			if( ! isset( drupal()->$files_table_name ) ) {
-				$files_table_name = 'file_managed';
+			self::$files_table_name = 'files';
+			if( ! isset( drupal()->{self::$files_table_name} ) ) {
+				self::$files_table_name = 'file_managed';
 				$nid_field = 'entity_id';
 				
-				$public_path = trailingslashit( 
+				self::$files_public_path = trailingslashit( 
 						unserialize(
 						drupal()->variable->value->getValue(
 							array(
@@ -431,85 +436,13 @@ class Drupal_to_WP {
 							continue;
 						
 						if( strpos( $column, '_fid' ) ) {
-							
-							if( array_key_exists( (int)$value, self::$file_to_file_map ) )
-								continue;
-							
-							// This is a "file ID" column - create attachment entry
-							
-							$file = drupal()->$files_table_name->getRecord( (int)$value );
-							
-							if( ! array_key_exists( 'filepath', $file ) ) {
-								
-								$path = parse_url( $file['uri'] );
-								
-								if( false !== strpos( $file['uri'], 'public://') ) {
-									
-									$file['filepath'] = str_replace( 'public://', $public_path, $file['uri'] );
-									
-								} else {
-									
-									// This is a youtube link or something -- hand it off and keep going
-									
-									do_action(
-										'metadata_import_unknown_path',
-										$file,
-										self::$node_to_post_map[ $meta_record[ $nid_field ] ]
-									);
-									
-									continue;
-									
-								}
-								
-							}
-							
-							$filename = $upload_dir['basedir'] . $file['filepath'];
-							
-							// Long files names will exceed guid length limit
-							$guid = trailingslashit( $upload_dir['url'] ) . $file['filepath'];
-							if( 255 >= strlen( $guid ) )
-								$guid = substr( $guid, 0, 254 ); 
-							
-							$attachment = array(
-								'guid'           => $guid,
-								'post_mime_type' => $file['filemime'],
-								'post_title'     => preg_replace( '/\.[^.]+$/', '', $file['filename'] ),
-								'post_status'    => 'inherit',
-								'post_date'      => date('Y-m-d H:i:s', $file['timestamp'] ),
-								'post_date_gmt'  => date('Y-m-d H:i:s', $file['timestamp'] )
+
+							$value = self::importAttachedFile(
+								self::$node_to_post_map[ $meta_record[$nid_field] ],
+								array(
+									'file_id' => (int)$value
+								)
 							);
-							
-							$result = wp_insert_attachment(
-								$attachment,
-								$filename,
-								self::$node_to_post_map[ $meta_record[$nid_field] ]
-							);
-							
-//							echo 'Found a file attachment meta value: ' . $value . ' for key:' . $column . ' and node: ' . $meta_record['nid'] . "<br>\n";
-							
-							self::$file_to_file_map[ (int)$value ] = $result;
-							
-							add_post_meta(
-								$result,
-								'_drupal_fid',
-								$file['fid']
-							);
-							
-							$value = $result;
-							
-							// If this as an image, build thumbnails and other data
-							if( false !== strpos( $file['filemime'], 'image' ) ) {
-								$image_meta = wp_generate_attachment_metadata( $result, $filename );
-								wp_update_attachment_metadata( $result, $image_meta );
-							}
-							
-							// If this was an image, set it as the featured image unless the post already has one
-							if( false !== strpos( $file['filemime'], 'image' ) && ! has_post_thumbnail( self::$node_to_post_map[ $meta_record[$nid_field] ] ) ) {
-								set_post_thumbnail(
-									self::$node_to_post_map[ $meta_record[$nid_field] ],
-									$result
-								);
-							}
 							
 						}
 						
@@ -556,44 +489,13 @@ class Drupal_to_WP {
 							
 							if( strpos( $column, '_fid' ) ) {
 								
-								if( array_key_exists( (int)$value, self::$file_to_file_map ) )
-									continue;
-								
-								// This is a "file ID" column - create attachment entry
-								
-								$file = drupal()->files->getRecord( (int)$value );
-								
-								// Long files names will exceed guid length limit
-								$guid = $upload_dir['url'] . $file['filepath'];
-								if( 255 >= strlen( $guid ) )
-									$guid = substr( $guid, 0, 254 ); 
-								
-								$attachment = array(
-									'guid'           => $guid,
-									'post_mime_type' => $file['filemime'],
-									'post_title'     => preg_replace( '/\.[^.]+$/', '', $file['filename'] ),
-									'post_status'    => 'inherit',
-									'post_date'      => date('Y-m-d H:i:s', $file['timestamp'] ),
-									'post_date_gmt'  => date('Y-m-d H:i:s', $file['timestamp'] )
+								$value = self::importAttachedFile(
+									self::$node_to_post_map[ $meta_record[$nid_field] ],
+									array(
+										'file_id' => (int)$value
+									)
 								);
 								
-								$result = wp_insert_attachment(
-									$attachment,
-									$file['filename'],
-									self::$node_to_post_map[ $meta_record['nid'] ]
-								);
-								
-	//							echo 'Found a file attachment meta value: ' . $value . ' for key:' . $column . ' and node: ' . $meta_record['nid'] . "<br>\n";
-								
-								self::$file_to_file_map[ (int)$value ] = $result;
-								
-								add_post_meta(
-									$result,
-									'_drupal_fid',
-									$file['fid']
-								);
-								
-								$value = $result;
 							}
 							
 							update_post_meta(
@@ -663,20 +565,14 @@ class Drupal_to_WP {
 				
 				if( ! array_key_exists( $upload['nid'], self::$node_to_post_map ) )
 					continue;
-				
-				$file = drupal()->files->getRecord(
+
+				$value = self::importAttachedFile(
+					self::$node_to_post_map[ $upload['nid'] ],
 					array(
-						'fid' => $upload['fid']
+						'file_id' => (int)$upload['fid']
 					)
 				);
 				
-				if( ! empty( $file ) ) {
-					add_post_meta(
-						self::$node_to_post_map[ $upload['nid'] ],
-						'_drupal_uploaded_file',
-						$file['filepath']
-					);
-				}
 			}
 			
 		}
@@ -1067,6 +963,119 @@ class Drupal_to_WP {
 		);
 		
 		kses_init_filters();
+		
+	}
+	
+	/**
+	 * Handle an attached file found in metadata or in file uploads
+	 */
+	static private function importAttachedFile( $post_ID, $attach_data ) {
+		
+		$fid = $attach_data['file_id'];
+		
+		if( array_key_exists( (int)$fid, self::$file_to_file_map ) ) {
+			add_post_meta(
+				$post_ID,
+				'_drupal_fid',
+				self::$file_to_file_map[ (int)$fid ]
+			);
+			return false;
+		}
+		
+//		echo_now('Adding metadata for: ' . self::$node_to_post_map[ $meta_record[$nid_field] ] . ' - ' . $column );
+		
+		// This is a "file ID" column - create attachment entry
+		
+		$file = drupal()->{self::$files_table_name}->getRecord( (int)$fid );
+		
+		if( empty( $file ) ) {
+			echo_now( 'Got nothing from file: ' . $fid );
+			return;
+		}
+		
+		if( ! array_key_exists( 'filepath', $file ) ) {
+			
+			$path = parse_url( $file['uri'] );
+			
+			if( false !== strpos( $file['uri'], 'public://') ) {
+				
+				$file['filepath'] = str_replace( 'public://', self::$files_public_path, $file['uri'] );
+				
+			} else {
+				
+				// This is a youtube link or something -- hand it off and keep going
+				
+				do_action(
+					'metadata_import_unknown_path',
+					$file,
+					$post_ID
+				);
+				
+				return;
+				
+			}
+			
+		}
+		
+		$filename = self::$files_upload_path['basedir'] . $file['filepath'];
+		
+		// Long files names will exceed guid length limit
+		$guid = trailingslashit( self::$files_upload_path['url'] ) . $file['filepath'];
+		if( 255 >= strlen( $guid ) )
+			$guid = substr( $guid, 0, 254 ); 
+		
+		$attachment = array(
+			'guid'           => $guid,
+			'post_mime_type' => $file['filemime'],
+			'post_title'     => preg_replace( '/\.[^.]+$/', '', $file['filename'] ),
+			'post_status'    => 'inherit',
+			'post_date'      => date('Y-m-d H:i:s', $file['timestamp'] ),
+			'post_date_gmt'  => date('Y-m-d H:i:s', $file['timestamp'] )
+		);
+		
+		echo_now( 'Adding attachment: ' . $filename . ' to post: ' . $post_ID );
+		
+		$result = wp_insert_attachment(
+			$attachment,
+			$filename,
+			$post_ID
+		);
+		
+		if( ! $result ) {
+			echo_now( 'ERROR adding attachment: ' . $filename );
+		}
+		
+//		echo 'Found a file attachment meta value: ' . $value . ' for key:' . $column . ' and node: ' . $meta_record['nid'] . "<br>\n";
+		
+		self::$file_to_file_map[ (int)$fid ] = $result;
+		
+		add_post_meta(
+			$result,
+			'_drupal_fid',
+			$file['fid']
+		);
+		
+		add_post_meta(
+			$post_ID,
+			'_drupal_uploaded_file',
+			$file['filepath']
+		);
+		
+		$value = $result;
+		
+		// If this as an image, build thumbnails and other data
+		if( false !== strpos( $file['filemime'], 'image' ) ) {
+			$image_meta = wp_generate_attachment_metadata( $result, $filename );
+			wp_update_attachment_metadata( $result, $image_meta );
+		}
+		
+		// If this was an image, set it as the featured image unless the post already has one
+		if( false !== strpos( $file['filemime'], 'image' ) && ! has_post_thumbnail( $post_ID ) ) {
+			set_post_thumbnail(
+				$post_ID,
+				$result
+			);
+		}
 		
 	}
 	
