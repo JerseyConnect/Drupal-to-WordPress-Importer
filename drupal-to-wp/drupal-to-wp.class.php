@@ -1033,7 +1033,7 @@ class Drupal_to_WP {
 			'post_date_gmt'  => date('Y-m-d H:i:s', $file['timestamp'] )
 		);
 		
-		echo_now( 'Adding attachment: ' . $filename . ' to post: ' . $post_ID );
+//		echo_now( 'Adding attachment: ' . $filename . ' to post: ' . $post_ID );
 		
 		$result = wp_insert_attachment(
 			$attachment,
