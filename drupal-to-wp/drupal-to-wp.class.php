@@ -70,6 +70,7 @@ class Drupal_to_WP {
 		extract( $node_extras );
 		
 		self::$node_to_post_map = array();
+		self::$term_to_term_map = array();
 		
 		if( empty( $add_cat_map ) ) {
 			echo_now( 'No category map found for nodes...' );
@@ -171,7 +172,8 @@ class Drupal_to_WP {
 				$node_url = strtolower( str_replace( ' ','-', $node['title'] ) );
 			}
 			
-			$post_author = array_key_exists( $node_content['uid'], self::$user_to_user_map ) ? self::$user_to_user_map[ $node_content['uid'] ] : 0;
+//			$post_author = array_key_exists( (int)$node_content['uid'], self::$user_to_user_map ) ? self::$user_to_user_map[ (int)$node_content['uid'] ] : 0;
+			$post_author = array_key_exists( (int)$node['uid'], self::$user_to_user_map ) ? self::$user_to_user_map[ (int)$node['uid'] ] : 0;
 			
 			// If user requested a new parent page, create or locate it
 			if( ! empty( $parents ) && array_key_exists( $node['type'], $parents ) && ! empty( $parents[ $node['type'] ] ) ) {
@@ -355,6 +357,8 @@ class Drupal_to_WP {
 	 */
 	static function importMetadata() {
 		
+		self::$file_to_file_map = array();
+		
 		include_once( ABSPATH . 'wp-admin/includes/image.php' );
 		
 		echo_now( 'Importing metadata...' );
@@ -424,8 +428,6 @@ class Drupal_to_WP {
 					
 					if( ! array_key_exists( $meta_record[$nid_field], self::$node_to_post_map ) )
 						continue;
-					
-//					echo 'Adding metadata for: ' . self::$node_to_post_map[ $meta_record['nid'] ] . ' - ' . $meta_record[ $value_column ] . "<br>\n";
 					
 					foreach( $meta_record as $column => $value ) {
 						
@@ -566,6 +568,10 @@ class Drupal_to_WP {
 				if( ! array_key_exists( $upload['nid'], self::$node_to_post_map ) )
 					continue;
 
+				// Skip records with fid = 0
+				if( 0 == $upload['fid'] )
+					continue;
+				
 				$value = self::importAttachedFile(
 					self::$node_to_post_map[ $upload['nid'] ],
 					array(
@@ -971,7 +977,7 @@ class Drupal_to_WP {
 	 */
 	static private function importAttachedFile( $post_ID, $attach_data ) {
 		
-		$fid = $attach_data['file_id'];
+		$fid = (int)$attach_data['file_id'];
 		
 		if( array_key_exists( (int)$fid, self::$file_to_file_map ) ) {
 			add_post_meta(
@@ -982,6 +988,14 @@ class Drupal_to_WP {
 			return false;
 		}
 		
+		global $wpdb;
+		
+		$attach = get_posts(
+			sprintf('post_type=attachment&meta_key=_drupal_fid&meta_value=%s',
+			drupal()->dbName . '-' . $fid
+			)
+		);
+		
 //		echo_now('Adding metadata for: ' . self::$node_to_post_map[ $meta_record[$nid_field] ] . ' - ' . $column );
 		
 		// This is a "file ID" column - create attachment entry
@@ -991,6 +1005,10 @@ class Drupal_to_WP {
 		if( empty( $file ) ) {
 			echo_now( 'Got nothing from file: ' . $fid );
 			return;
+		}
+
+		if( ! empty( $attach ) ) {
+			return $attach[0]->ID;
 		}
 		
 		if( ! array_key_exists( 'filepath', $file ) ) {
@@ -1052,7 +1070,7 @@ class Drupal_to_WP {
 		add_post_meta(
 			$result,
 			'_drupal_fid',
-			$file['fid']
+			drupal()->dbName . '-' . $file['fid']
 		);
 		
 		add_post_meta(
