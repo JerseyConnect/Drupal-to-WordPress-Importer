@@ -139,12 +139,20 @@ class Drupal_to_WP {
 				);
 				
 				if( empty( $node_revision_content ) ) {
+					
 					echo_now( 'Could not get content for nid: ' . $node['nid'] );
-					continue;
-				}
+					
+					$node_content['body']   = '';
+					$node_content['teaser'] = '';
+					
+//					continue;
+					
+				} else {
 				
-				$node_content['body']   = $node_revision_content['body_value'];
-				$node_content['teaser'] = $node_revision_content['body_summary'];
+					$node_content['body']   = $node_revision_content['body_value'];
+					$node_content['teaser'] = $node_revision_content['body_summary'];
+					
+				}
 				
 			}
 			
