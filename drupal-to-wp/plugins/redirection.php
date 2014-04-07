@@ -56,6 +56,10 @@ class RedirectionImport {
 				
 				// TODO: check for existing alias and notify if found
 				
+				// Skip empty aliases no matter how they got here
+				if( empty( $alias ) )
+					continue;
+				
 				Red_Item::create(
 					array(
 						'source'     => $alias,
