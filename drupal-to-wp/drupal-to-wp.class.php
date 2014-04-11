@@ -454,6 +454,12 @@ class Drupal_to_WP {
 								)
 							);
 							
+							add_post_meta(
+								$value,
+								'_drupal_source',
+								$column
+							);
+							
 						}
 						
 						add_post_meta(
@@ -504,6 +510,12 @@ class Drupal_to_WP {
 									array(
 										'file_id' => (int)$value
 									)
+								);
+								
+								add_post_meta(
+									$value,
+									'_drupal_source',
+									$column
 								);
 								
 							}
@@ -585,6 +597,12 @@ class Drupal_to_WP {
 					array(
 						'file_id' => (int)$upload['fid']
 					)
+				);
+				
+				add_post_meta(
+					$value,
+					'_drupal_source',
+					'upload'
 				);
 				
 			}
@@ -1043,7 +1061,7 @@ class Drupal_to_WP {
 			
 		}
 		
-		$filename = self::$files_upload_path['basedir'] . $file['filepath'];
+		$filename = trailingslashit( self::$files_upload_path['basedir'] ) . $file['filepath'];
 		
 		// Long files names will exceed guid length limit
 		$guid = trailingslashit( self::$files_upload_path['url'] ) . $file['filepath'];
@@ -1102,6 +1120,8 @@ class Drupal_to_WP {
 				$result
 			);
 		}
+		
+		return $value;
 		
 	}
 	
