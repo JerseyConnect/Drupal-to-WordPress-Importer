@@ -672,6 +672,9 @@ class Drupal_to_WP {
 		$terms = drupal()->$term_data_table->getRecords();
 		
 		foreach( $terms as $term ) {
+
+			if( apply_filters( 'import_term_skip_term', false, $term ) )
+				continue;
 			
 			$parent = drupal()->$term_hierarchy_table->parent->getValue(
 				array(
