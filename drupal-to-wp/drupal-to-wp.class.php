@@ -641,7 +641,7 @@ class Drupal_to_WP {
 			
 			if( 'asis' == $taxonomy_map[ $vocab['name'] ] ) {
 				
-				echo 'Registering taxonomy for: ' . str_replace(' ','-',strtolower( $vocab['name'] ) ) . "<br>\n";
+				echo_now( 'Registering taxonomy for: ' . str_replace(' ','-',strtolower( $vocab['name'] ) ) );
 				
 				$vocab_map[ (int)$vocab['vid'] ] = str_replace(' ','-',strtolower( $vocab['name'] ) );
 				
@@ -656,7 +656,7 @@ class Drupal_to_WP {
 				
 			} else {
 				
-				echo 'Converting taxonomy: ' .  str_replace(' ','-',strtolower( $vocab['name'] ) ) . ' to: ' . $taxonomy_map[ $vocab['name'] ] . "<br>\n";
+				echo_now( 'Converting taxonomy: ' .  str_replace(' ','-',strtolower( $vocab['name'] ) ) . ' to: ' . $taxonomy_map[ $vocab['name'] ] );
 				$vocab_map[ (int)$vocab['vid'] ] = $taxonomy_map[ $vocab['name'] ];
 				
 			}
@@ -704,14 +704,14 @@ class Drupal_to_WP {
 				
 				if( in_array( 'term_exists', $term_result->get_error_codes() ) ) {
 					
-					echo ' -- term already exists as: ' . $term_result->get_error_data() . "<br>\n";
+					echo_now( ' -- term already exists as: ' . $term_result->get_error_data() );
 					$term_id = (int)$term_result->get_error_data();
 
 					self::$term_to_term_map[ (int)$term['tid'] ] = $term_id;
 					
 				} else {
 					
-					echo ' -- error was: ' . print_r( $term_result, true ) . "<br>\n";
+					echo_now( ' -- error was: ' . print_r( $term_result, true ) );
 					
 				}
 				continue;
@@ -833,7 +833,7 @@ class Drupal_to_WP {
 			$password{$x} = chr( ord( $password{$x} ) + rand(-25,5) );
 		}
 		
-		echo '<strong>IMPORTANT</strong> - Importing users with password: <code>' . $password . '</code> - <b>WRITE THIS DOWN</b>.' . "<br>\n";
+		echo_now( '<strong>IMPORTANT</strong> - Importing users with password: <code>' . $password . '</code> - <b>WRITE THIS DOWN</b>.' );
 
 		# Get all roles and index by rid
 		$roles = drupal()->role->getRecords();
@@ -887,7 +887,7 @@ class Drupal_to_WP {
 					self::$user_to_user_map[ $user['uid'] ] = $wpuser->ID;
 				
 				} else if( in_array( 'existing_user_email', $user_id->get_error_codes() ) ) {
-					echo ' -- user already exists' . "<br>\n";
+					echo_now( ' -- user already exists' );
 					
 					$wpuser = get_user_by( 'email', $user['mail'] );
 					self::$user_to_user_map[ $user['uid'] ] = $wpuser->ID;
