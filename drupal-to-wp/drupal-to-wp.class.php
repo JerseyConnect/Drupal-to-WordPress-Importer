@@ -462,7 +462,7 @@ class Drupal_to_WP {
 							
 							if( array_key_exists( str_replace( '_fid', '_data', $column ), $meta_record ) ) {
 								
-								$details = unserialize( $meta_record[ str_replace( '_fid', '_data', $column ) ] );
+								$details = maybe_unserialize( $meta_record[ str_replace( '_fid', '_data', $column ) ] );
 								
 								if( isset( $details['title'] ) ) {
 									wp_update_post(
@@ -541,7 +541,7 @@ class Drupal_to_WP {
 								
 								if( array_key_exists( str_replace( '_fid', '_data', $column ), $meta_record ) ) {
 									
-									$details = unserialize( $meta_record[ str_replace( '_fid', '_data', $column ) ] );
+									$details = maybe_unserialize( $meta_record[ str_replace( '_fid', '_data', $column ) ] );
 									
 									if( isset( $details['title'] ) ) {
 										wp_update_post(
@@ -614,7 +614,13 @@ class Drupal_to_WP {
 		
 		if( isset( drupal()->upload ) ) {
 			
-			$uploads = drupal()->upload->getRecords();
+			$uploads = drupal()->getRecords(
+				drupal()->query(
+					'SELECT * FROM upload u
+						WHERE (nid, vid) IN
+						(SELECT nid, MAX(vid) FROM upload GROUP BY nid)'
+				)
+			);
 			
 			foreach( $uploads as $upload ) {
 				
@@ -645,6 +651,12 @@ class Drupal_to_WP {
 					$value,
 					'_drupal_source',
 					'upload'
+				);
+				
+				add_post_meta(
+					$value,
+					'_drupal_list_upload',
+					(int)$upload['list']
 				);
 				
 			}
