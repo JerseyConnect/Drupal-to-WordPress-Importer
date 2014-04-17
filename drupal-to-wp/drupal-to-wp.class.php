@@ -460,6 +460,27 @@ class Drupal_to_WP {
 								$column
 							);
 							
+							if( array_key_exists( str_replace( '_fid', '_data', $column ), $meta_record ) ) {
+								
+								$details = unserialize( $meta_record[ str_replace( '_fid', '_data', $column ) ] );
+								
+								if( isset( $details['title'] ) ) {
+									wp_update_post(
+										array(
+											'ID' => $value,
+											'post_excerpt' => $details['title']
+										)
+									);
+								}
+								if( isset( $details['alt'] ) ) {
+									update_post_meta(
+										$value,
+										'_wp_attachment_image_alt',
+										$details['alt']
+									);
+								}
+							}
+							
 						}
 						
 						add_post_meta(
@@ -517,6 +538,27 @@ class Drupal_to_WP {
 									'_drupal_source',
 									$column
 								);
+								
+								if( array_key_exists( str_replace( '_fid', '_data', $column ), $meta_record ) ) {
+									
+									$details = unserialize( $meta_record[ str_replace( '_fid', '_data', $column ) ] );
+									
+									if( isset( $details['title'] ) ) {
+										wp_update_post(
+											array(
+												'ID' => $value,
+												'post_excerpt' => $details['title']
+											)
+										);
+									}
+									if( isset( $details['alt'] ) ) {
+										update_post_meta(
+											$value,
+											'_wp_attachment_image_alt',
+											$details['alt']
+										);
+									}
+								}
 								
 							}
 							
@@ -673,9 +715,6 @@ class Drupal_to_WP {
 		
 		foreach( $terms as $term ) {
 
-			if( apply_filters( 'import_term_skip_term', false, $term ) )
-				continue;
-			
 			$parent = drupal()->$term_hierarchy_table->parent->getValue(
 				array(
 					'tid' => $term['tid']
@@ -683,6 +722,9 @@ class Drupal_to_WP {
 			);
 			
 			if( ! array_key_exists( (int)$term['vid'], $vocab_map ) )
+				continue;
+
+			if( apply_filters( 'import_term_skip_term', false, $term, $vocab_map[ (int)$term['vid'] ] ) )
 				continue;
 
 			$term_vocab_map[ $term['tid'] ] = $vocab_map[ (int)$term['vid'] ];
