@@ -26,6 +26,7 @@ function wordpress() {
 class Drupal_to_WP {
 	
 	static $node_to_post_map = array();
+	static $node_to_rev_map  = array();
 	static $term_to_term_map = array();
 	static $user_to_user_map = array();
 	static $file_to_file_map = array();
@@ -70,6 +71,7 @@ class Drupal_to_WP {
 		extract( $node_extras );
 		
 		self::$node_to_post_map = array();
+		self::$node_to_rev_map  = array();
 		self::$term_to_term_map = array();
 		
 		if( empty( $add_cat_map ) ) {
@@ -121,6 +123,9 @@ class Drupal_to_WP {
 				continue;
 			
 			# Get content from latest revision
+			
+			self::$node_to_rev_map[ (int)$node['nid'] ] = (int)$node['vid'];
+			
 			$node_content = drupal()->$node_rev_table->getRecord(
 				array(
 					'nid'  => $node['nid'],
@@ -437,6 +442,9 @@ class Drupal_to_WP {
 					if( ! array_key_exists( $meta_record[$nid_field], self::$node_to_post_map ) )
 						continue;
 					
+					if( $meta_record['vid'] != self::$node_to_rev_map[ $meta_record[$nid_field] ] )
+						continue;
+					
 					foreach( $meta_record as $column => $value ) {
 						
 						if( empty( $value ) )
@@ -512,6 +520,9 @@ class Drupal_to_WP {
 						// Import all columns beginning with field_name
 						
 						if( ! array_key_exists( $meta_record['nid'], self::$node_to_post_map ) )
+							continue;
+
+						if( $meta_record['vid'] != self::$node_to_rev_map[ $meta_record[$nid_field] ] )
 							continue;
 						
 	//					echo 'Adding metadata for: ' . self::$node_to_post_map[ $meta_record['nid'] ] . ' - ' . $meta_record[ $value_column ] . "<br>\n";
