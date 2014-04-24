@@ -387,6 +387,7 @@ class Drupal_to_WP {
 			$field_instance_table = 'field_config_instance';
 		
 		$nid_field = 'nid';
+		$vid_field = 'vid';
 		
 		$meta_fields = drupal()->$field_instance_table->getRecords();
 		
@@ -414,6 +415,7 @@ class Drupal_to_WP {
 			if( ! isset( drupal()->{self::$files_table_name} ) ) {
 				self::$files_table_name = 'file_managed';
 				$nid_field = 'entity_id';
+				$vid_field = 'revision_id';
 				
 				self::$files_public_path = trailingslashit( 
 						unserialize(
@@ -442,7 +444,7 @@ class Drupal_to_WP {
 					if( ! array_key_exists( $meta_record[$nid_field], self::$node_to_post_map ) )
 						continue;
 					
-					if( $meta_record['vid'] != self::$node_to_rev_map[ $meta_record[$nid_field] ] )
+					if( $meta_record[$vid_field] != self::$node_to_rev_map[ $meta_record[$nid_field] ] )
 						continue;
 					
 					foreach( $meta_record as $column => $value ) {
@@ -522,7 +524,7 @@ class Drupal_to_WP {
 						if( ! array_key_exists( $meta_record['nid'], self::$node_to_post_map ) )
 							continue;
 
-						if( $meta_record['vid'] != self::$node_to_rev_map[ $meta_record[$nid_field] ] )
+						if( $meta_record[$vid_field] != self::$node_to_rev_map[ $meta_record[$nid_field] ] )
 							continue;
 						
 	//					echo 'Adding metadata for: ' . self::$node_to_post_map[ $meta_record['nid'] ] . ' - ' . $meta_record[ $value_column ] . "<br>\n";
