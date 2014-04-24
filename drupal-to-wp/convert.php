@@ -18,6 +18,9 @@ require 'settings.php';
 require  WP_PATH . '/wp-load.php';
 require 'drupal-to-wp.class.php';
 
+if( defined( 'WP_USERID' ) )
+	wp_set_current_user( WP_USERID );
+
 /**
  * Load plugins
  */

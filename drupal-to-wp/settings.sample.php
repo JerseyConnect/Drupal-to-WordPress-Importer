@@ -18,6 +18,11 @@ define( 'DR_PASS', 'password' );
 define( 'WP_PATH', 'wp' );
 
 /**
+ * User to attribute all conversion operations
+ */
+define( 'WP_USERID', 1 );
+
+/**
  * Constants for accessing the WordPress database -- only needed if erasing a WP site
  */
 define( 'WP_HOST', 'localhost' );

@@ -41,6 +41,11 @@ class Drupal_to_WP {
 	 */
 	static function eraseWPData() {
 		
+		$user_id = 1;
+		
+		if( defined( 'WP_USERID' ) )
+			$user_id = (int)WP_USERID;
+		
 		global $wpdb;
 		
 		echo_now( 'Clearing WordPress data...' );
@@ -55,8 +60,8 @@ class Drupal_to_WP {
 		wordpress()->query( 'TRUNCATE TABLE ' . $wpdb->prefix . 'term_taxonomy' );
 		wordpress()->query( 'TRUNCATE TABLE ' . $wpdb->prefix . 'terms' );
 		
-		wordpress()->query( 'DELETE FROM ' . $wpdb->prefix . 'users WHERE ID > 1' );
-		wordpress()->query( 'DELETE FROM ' . $wpdb->prefix . 'usermeta WHERE user_id > 1' );
+		wordpress()->query( $wpdb->prepare( 'DELETE FROM ' . $wpdb->prefix . 'users WHERE ID != %d', $user_id ) );
+		wordpress()->query( $wpdb->prepare( 'DELETE FROM ' . $wpdb->prefix . 'usermeta WHERE user_id != %d', $user_id ) );
 		
 		do_action( 'erase_wp_data_after' );
 		

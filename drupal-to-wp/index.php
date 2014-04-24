@@ -8,6 +8,9 @@ require 'drupal-to-wp.class.php';
 if ( ! defined( 'UPLOADS' ) )
 	define( 'UPLOADS', trailingslashit( WP_CONTENT_DIR ) . 'uploads' );
 
+if( defined( 'WP_USERID' ) )
+	wp_set_current_user( WP_USERID );
+
 /**
  * Load plugins
  */
