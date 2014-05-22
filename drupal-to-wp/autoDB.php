@@ -521,6 +521,12 @@ class AutoDB {
 			return new Error('Could not connect to requested host.');
 		}
 		
+		$charset = mysqli_get_charset( $conn );
+		
+		if( ! mysqli_set_charset( $conn, $charset->charset ) ) {
+			return new Error( 'Unable to set connection character set.' );
+		}
+		
 		$this->dbName = $db;
 		$this->link   = $conn;
 		
