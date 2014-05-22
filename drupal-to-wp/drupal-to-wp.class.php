@@ -368,6 +368,8 @@ class Drupal_to_WP {
 			
 		}
 		
+		do_action( 'imported_nodes' );
+		
 	}
 	
 	/**
@@ -681,6 +683,8 @@ class Drupal_to_WP {
 			
 		}
 		
+		do_action( 'imported_metadata' );
+		
 	}
 	
 	/**
@@ -833,6 +837,8 @@ class Drupal_to_WP {
 
 		}
 		
+		do_action( 'imported_taxonomies' );
+		
 	}
 	
 	/**
@@ -887,6 +893,8 @@ class Drupal_to_WP {
 			);
 			
 		}
+		
+		do_action( 'imported_comments' );
 		
 	}
 	
@@ -973,9 +981,19 @@ class Drupal_to_WP {
 			
 			self::$user_to_user_map[ $user['uid'] ] = $user_id;
 			
+			if( ! empty( $user['signature'] ) ) {
+				add_user_meta(
+					$user_id,
+					'description',
+					$user['signature']
+				);
+			}
+			
 			add_user_meta( $user_id, '_drupal_metadata', $user['data'] );
 			
 		}
+		
+		do_action( 'imported_users' );
 		
 	}
 	
@@ -1080,13 +1098,8 @@ class Drupal_to_WP {
 		
 		$fid = (int)$attach_data['file_id'];
 		
-		if( array_key_exists( (int)$fid, self::$file_to_file_map ) ) {
-			add_post_meta(
-				$post_ID,
-				'_drupal_fid',
-				self::$file_to_file_map[ (int)$fid ]
-			);
-			return false;
+		if( 0 == $fid ) {
+			return;
 		}
 		
 		global $wpdb;
