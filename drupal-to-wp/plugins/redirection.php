@@ -3,6 +3,8 @@
 /**
  * Conversion filter for Redirection
  * Create redirects for all Drupal aliases to the new URL for a post or page.
+ * 
+ * Requires the Redirection plugin -- https://wordpress.org/plugins/redirection/
  */
 
 define( 'REDIRECTIONIMPORT_GROUP_NAME', 'Drupal Conversion' );

@@ -1,5 +1,5 @@
 <?php
-/*
+/**
  * Handle oEmbeds from Drupal 7
  */
 

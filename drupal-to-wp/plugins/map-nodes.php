@@ -5,7 +5,8 @@
  *   and redirect support if Redirection is available. Cleans
  *   up merged posts.
  * 
- * This plugin will search for a node_map.csv file in the specified folder.
+ * This plugin will search for a [database name]_map.csv file in the specified folder, but
+ *   also supports the use of a single `global-node-map.csv` file for multiple databases.
  * 
  */
 
@@ -53,14 +54,10 @@ class MapNodeURL {
 		if( empty( $key ) || ! array_key_exists( $key, self::$map ) )
 			return;
 		
-//		echo_now( '1. Processing node: ' . $node['nid'] . '/ post: ' . $post_ID );
-		
 		switch( strtolower( self::$map[ $key ][ self::$map_fieldmap[ 'action' ] ] ) ) {
 			
 			case 'delete':   // Delete page and don't create redirects -- also cleans up metadata
 			
-//				echo_now( '2. Action = DELETE for node: ' . $node['nid'] );
-		
 				wp_delete_post(
 					$post_ID,
 					true
@@ -108,23 +105,14 @@ class MapNodeURL {
 			case 'yes':
 			
 
-//				echo_now( '2. Action = KEEP for node: ' . $node['nid'] );
-
 				if( $result = get_page_by_path( untrailingslashit( self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] ) ) ) {
-
-//					echo_now('Checking to ensure parent page is in place:');
 
 					// Make sure the parent page is at its final URL
 					$parent_key = self::get_key( $result->ID );
 					
 					if( $parent_key ) {
 					
-//						echo_now( 'Expected: ' . untrailingslashit( self::$map[ $parent_key ][ self::$map_fieldmap[ 'final_url' ] ] ) );
-//						echo_now( 'Current: ' . untrailingslashit( self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] ) );
-						
 						if( untrailingslashit( self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] ) != untrailingslashit( self::$map[ $parent_key ][ self::$map_fieldmap[ 'final_url' ] ] )) {
-							
-//							echo_now('Parent page at wrong URL');
 							
 							// If the page is supposed to be somewhere else, move it now
 							
@@ -187,8 +175,6 @@ class MapNodeURL {
 				
 				break;
 			default:
-				
-//				echo_now( 'Got an unknown action: ' . strtolower( self::$map[ $key ][ self::$map_fieldmap[ 'action' ] ] ) . 'for post: ' . $post_ID );
 				
 				// If the action is the name of a different post type, convert the post
 				$post_types = get_post_types( '', 'names' );
@@ -308,6 +294,9 @@ class MapNodeURL {
 		
 	}
 	
+	/**
+	 * Load the map file containing URLs to convert
+	 */
 	public static function load_map() {
 		
 		if( ! empty( self::$map ) && 'memory' == NODEMAP_READ_MODE )
@@ -357,6 +346,7 @@ class MapNodeURL {
 			// TODO: Streaming mode -- this will take forever but will scale
 			// Probably build an index of the file with database names and node IDs
 			// Then load chunks when a matching node is processed.
+			// This ended up not being needed.
 			
 		}
 		
@@ -374,10 +364,6 @@ class MapNodeURL {
 			// If the page is already in place, we are done
 			if( $result->ID == $post_ID )
 				return;
-			
-//			echo_now( '3. A page already exists at: ' . self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] . ' -- merging with: ' . $result->ID . ' and deleting: ' . $node['nid'] );
-			
-//					echo_now( print_r( $result, true ) );
 			
 			// A page already exists at the specified URL - merge the contents
 			
@@ -441,12 +427,8 @@ class MapNodeURL {
 				)
 			);
 			
-//			echo_now( 'Moving any children of the post to be deleted' );
-			
 			if( ! empty( $children ) ) {
 				foreach( $children as $child_page ) {
-					
-//					echo_now( 'Moving orphaned post: ' . $child_page->ID . ' to ' . $result->ID );
 					
 					$update_result = wp_update_post(
 						array(
@@ -471,11 +453,7 @@ class MapNodeURL {
 		} else {
 			
 			// No page exists at the specified URL - move this page
-//			echo_now( '3. No page exists at: ' . self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] );
-			
 			$last_page = self::make_page_tree(  self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] );
-			
-//			echo_now( '6. Creating page: ' . basename( self::$map[ $key ][ self::$map_fieldmap[ 'final_url' ] ] ) . ' with parent: ' . $last_page );
 			
 			$update_result = wp_update_post(
 				array(
@@ -487,8 +465,6 @@ class MapNodeURL {
 			
 			if( ! $update_result )
 				echo_now( 'ERRROR - There was a problem moving post: ' . $post_ID );
-			
-//			print_r( get_post( $post_ID ) );
 			
 		}
 		
@@ -508,26 +484,16 @@ class MapNodeURL {
 		
 		for( $x = 1; $x < count( $path_parts ); $x++ ) {
 			
-//			echo_now( '4. Checking: ' . implode( '/', array_slice( $path_parts, 0, $x ) ) );
-
 			if( $page = get_page_by_path( implode( '/', array_slice( $path_parts, 0, $x ) ) ) ) {
 				
-//				echo_now( '5. Page exists as: ' . $page->ID );
 				$last_page = $page->ID;
-
-//				echo_now('Checking to ensure parent page is in place:');
 
 				// Make sure the parent page is at its final URL
 				$parent_key = self::get_key( $page->ID );
 				
 				if( $parent_key ) {
 				
-//					echo_now( 'Expected: ' . untrailingslashit( self::$map[ $parent_key ][ self::$map_fieldmap[ 'final_url' ] ] ) );
-//					echo_now( 'Current: ' . untrailingslashit( implode( '/', array_slice( $path_parts, 0, $x ) ) ) );
-					
 					if( implode( '/', array_slice( $path_parts, 0, $x ) ) != untrailingslashit( self::$map[ $parent_key ][ self::$map_fieldmap[ 'final_url' ] ] )) {
-						
-//						echo_now('Parent page at wrong URL');
 						
 						// If the page is supposed to be somewhere else, move it now
 						
@@ -549,7 +515,6 @@ class MapNodeURL {
 			
 			if( $page = get_page_by_path( implode( '/', array_slice( $path_parts, 0, $x ) ) ) ) {
 			
-//				echo_now( '5. Page exists as: ' . $page->ID );
 				$last_page = $page->ID;
 				
 				do_action(
@@ -559,8 +524,6 @@ class MapNodeURL {
 				
 				
 			} else {
-				
-//				echo_now( '5. Creating page: ' . $path_parts[ ( $x - 1 ) ] . ' at ' . implode( '/', array_slice( $path_parts, 0, $x ) ) . ' with parent: ' . $last_page );
 				
 				$last_page = wp_insert_post(
 					array(
@@ -572,8 +535,6 @@ class MapNodeURL {
 						'post_parent'  => $last_page
 					)
 				);
-				
-//				echo_now( 'Created page with result: ' . $last_page );
 				
 				if( ! $last_page ) {
 					echo 'ERROR creating parent page: ' . $path_parts[ ( $x - 1 ) ] . "<br>\n";
